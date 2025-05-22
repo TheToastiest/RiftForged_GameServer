@@ -20,10 +20,6 @@ namespace Networking {
 namespace UDP {
 namespace S2C {
 
-struct S2C_SystemBroadcastMsg;
-struct S2C_SystemBroadcastMsgBuilder;
-struct S2C_SystemBroadcastMsgT;
-
 struct Effect_AreaDamageData;
 struct Effect_AreaDamageDataBuilder;
 struct Effect_AreaDamageDataT;
@@ -63,6 +59,10 @@ struct S2C_CombatEventMsgT;
 struct S2C_PongMsg;
 struct S2C_PongMsgBuilder;
 struct S2C_PongMsgT;
+
+struct S2C_SystemBroadcastMsg;
+struct S2C_SystemBroadcastMsgBuilder;
+struct S2C_SystemBroadcastMsgT;
 
 struct Root_S2C_UDP_Message;
 struct Root_S2C_UDP_MessageBuilder;
@@ -567,84 +567,6 @@ struct S2C_UDP_PayloadUnion {
 
 bool VerifyS2C_UDP_Payload(::flatbuffers::Verifier &verifier, const void *obj, S2C_UDP_Payload type);
 bool VerifyS2C_UDP_PayloadVector(::flatbuffers::Verifier &verifier, const ::flatbuffers::Vector<::flatbuffers::Offset<void>> *values, const ::flatbuffers::Vector<uint8_t> *types);
-
-struct S2C_SystemBroadcastMsgT : public ::flatbuffers::NativeTable {
-  typedef S2C_SystemBroadcastMsg TableType;
-  std::string message_text{};
-  std::string sender_name{};
-};
-
-struct S2C_SystemBroadcastMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
-  typedef S2C_SystemBroadcastMsgT NativeTableType;
-  typedef S2C_SystemBroadcastMsgBuilder Builder;
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_MESSAGE_TEXT = 4,
-    VT_SENDER_NAME = 6
-  };
-  const ::flatbuffers::String *message_text() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_MESSAGE_TEXT);
-  }
-  const ::flatbuffers::String *sender_name() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_SENDER_NAME);
-  }
-  bool Verify(::flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffsetRequired(verifier, VT_MESSAGE_TEXT) &&
-           verifier.VerifyString(message_text()) &&
-           VerifyOffset(verifier, VT_SENDER_NAME) &&
-           verifier.VerifyString(sender_name()) &&
-           verifier.EndTable();
-  }
-  S2C_SystemBroadcastMsgT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(S2C_SystemBroadcastMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static ::flatbuffers::Offset<S2C_SystemBroadcastMsg> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SystemBroadcastMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
-};
-
-struct S2C_SystemBroadcastMsgBuilder {
-  typedef S2C_SystemBroadcastMsg Table;
-  ::flatbuffers::FlatBufferBuilder &fbb_;
-  ::flatbuffers::uoffset_t start_;
-  void add_message_text(::flatbuffers::Offset<::flatbuffers::String> message_text) {
-    fbb_.AddOffset(S2C_SystemBroadcastMsg::VT_MESSAGE_TEXT, message_text);
-  }
-  void add_sender_name(::flatbuffers::Offset<::flatbuffers::String> sender_name) {
-    fbb_.AddOffset(S2C_SystemBroadcastMsg::VT_SENDER_NAME, sender_name);
-  }
-  explicit S2C_SystemBroadcastMsgBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  ::flatbuffers::Offset<S2C_SystemBroadcastMsg> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = ::flatbuffers::Offset<S2C_SystemBroadcastMsg>(end);
-    fbb_.Required(o, S2C_SystemBroadcastMsg::VT_MESSAGE_TEXT);
-    return o;
-  }
-};
-
-inline ::flatbuffers::Offset<S2C_SystemBroadcastMsg> CreateS2C_SystemBroadcastMsg(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::String> message_text = 0,
-    ::flatbuffers::Offset<::flatbuffers::String> sender_name = 0) {
-  S2C_SystemBroadcastMsgBuilder builder_(_fbb);
-  builder_.add_sender_name(sender_name);
-  builder_.add_message_text(message_text);
-  return builder_.Finish();
-}
-
-inline ::flatbuffers::Offset<S2C_SystemBroadcastMsg> CreateS2C_SystemBroadcastMsgDirect(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    const char *message_text = nullptr,
-    const char *sender_name = nullptr) {
-  auto message_text__ = message_text ? _fbb.CreateString(message_text) : 0;
-  auto sender_name__ = sender_name ? _fbb.CreateString(sender_name) : 0;
-  return RiftForged::Networking::UDP::S2C::CreateS2C_SystemBroadcastMsg(
-      _fbb,
-      message_text__,
-      sender_name__);
-}
-
-::flatbuffers::Offset<S2C_SystemBroadcastMsg> CreateS2C_SystemBroadcastMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SystemBroadcastMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
 struct Effect_AreaDamageDataT : public ::flatbuffers::NativeTable {
   typedef Effect_AreaDamageData TableType;
@@ -1269,7 +1191,7 @@ struct S2C_RiftStepInitiatedMsgT : public ::flatbuffers::NativeTable {
   std::unique_ptr<RiftForged::Networking::Shared::Vec3> actual_start_position{};
   std::unique_ptr<RiftForged::Networking::Shared::Vec3> calculated_target_position{};
   std::unique_ptr<RiftForged::Networking::Shared::Vec3> actual_final_position{};
-  float travel_duration_sec = 1.0f;
+  float cosmetic_travel_duration_sec = 0.25f;
   std::vector<RiftForged::Networking::UDP::S2C::RiftStepEffectPayloadUnion> entry_effects{};
   std::vector<RiftForged::Networking::UDP::S2C::RiftStepEffectPayloadUnion> exit_effects{};
   std::string start_vfx_id{};
@@ -1289,7 +1211,7 @@ struct S2C_RiftStepInitiatedMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers:
     VT_ACTUAL_START_POSITION = 6,
     VT_CALCULATED_TARGET_POSITION = 8,
     VT_ACTUAL_FINAL_POSITION = 10,
-    VT_TRAVEL_DURATION_SEC = 12,
+    VT_COSMETIC_TRAVEL_DURATION_SEC = 12,
     VT_ENTRY_EFFECTS_TYPE = 14,
     VT_ENTRY_EFFECTS = 16,
     VT_EXIT_EFFECTS_TYPE = 18,
@@ -1310,8 +1232,8 @@ struct S2C_RiftStepInitiatedMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers:
   const RiftForged::Networking::Shared::Vec3 *actual_final_position() const {
     return GetStruct<const RiftForged::Networking::Shared::Vec3 *>(VT_ACTUAL_FINAL_POSITION);
   }
-  float travel_duration_sec() const {
-    return GetField<float>(VT_TRAVEL_DURATION_SEC, 1.0f);
+  float cosmetic_travel_duration_sec() const {
+    return GetField<float>(VT_COSMETIC_TRAVEL_DURATION_SEC, 0.25f);
   }
   const ::flatbuffers::Vector<int8_t> *entry_effects_type() const {
     return GetPointer<const ::flatbuffers::Vector<int8_t> *>(VT_ENTRY_EFFECTS_TYPE);
@@ -1340,7 +1262,7 @@ struct S2C_RiftStepInitiatedMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers:
            VerifyField<RiftForged::Networking::Shared::Vec3>(verifier, VT_ACTUAL_START_POSITION, 4) &&
            VerifyField<RiftForged::Networking::Shared::Vec3>(verifier, VT_CALCULATED_TARGET_POSITION, 4) &&
            VerifyField<RiftForged::Networking::Shared::Vec3>(verifier, VT_ACTUAL_FINAL_POSITION, 4) &&
-           VerifyField<float>(verifier, VT_TRAVEL_DURATION_SEC, 4) &&
+           VerifyField<float>(verifier, VT_COSMETIC_TRAVEL_DURATION_SEC, 4) &&
            VerifyOffset(verifier, VT_ENTRY_EFFECTS_TYPE) &&
            verifier.VerifyVector(entry_effects_type()) &&
            VerifyOffset(verifier, VT_ENTRY_EFFECTS) &&
@@ -1380,8 +1302,8 @@ struct S2C_RiftStepInitiatedMsgBuilder {
   void add_actual_final_position(const RiftForged::Networking::Shared::Vec3 *actual_final_position) {
     fbb_.AddStruct(S2C_RiftStepInitiatedMsg::VT_ACTUAL_FINAL_POSITION, actual_final_position);
   }
-  void add_travel_duration_sec(float travel_duration_sec) {
-    fbb_.AddElement<float>(S2C_RiftStepInitiatedMsg::VT_TRAVEL_DURATION_SEC, travel_duration_sec, 1.0f);
+  void add_cosmetic_travel_duration_sec(float cosmetic_travel_duration_sec) {
+    fbb_.AddElement<float>(S2C_RiftStepInitiatedMsg::VT_COSMETIC_TRAVEL_DURATION_SEC, cosmetic_travel_duration_sec, 0.25f);
   }
   void add_entry_effects_type(::flatbuffers::Offset<::flatbuffers::Vector<int8_t>> entry_effects_type) {
     fbb_.AddOffset(S2C_RiftStepInitiatedMsg::VT_ENTRY_EFFECTS_TYPE, entry_effects_type);
@@ -1421,7 +1343,7 @@ inline ::flatbuffers::Offset<S2C_RiftStepInitiatedMsg> CreateS2C_RiftStepInitiat
     const RiftForged::Networking::Shared::Vec3 *actual_start_position = nullptr,
     const RiftForged::Networking::Shared::Vec3 *calculated_target_position = nullptr,
     const RiftForged::Networking::Shared::Vec3 *actual_final_position = nullptr,
-    float travel_duration_sec = 1.0f,
+    float cosmetic_travel_duration_sec = 0.25f,
     ::flatbuffers::Offset<::flatbuffers::Vector<int8_t>> entry_effects_type = 0,
     ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<void>>> entry_effects = 0,
     ::flatbuffers::Offset<::flatbuffers::Vector<int8_t>> exit_effects_type = 0,
@@ -1438,7 +1360,7 @@ inline ::flatbuffers::Offset<S2C_RiftStepInitiatedMsg> CreateS2C_RiftStepInitiat
   builder_.add_exit_effects_type(exit_effects_type);
   builder_.add_entry_effects(entry_effects);
   builder_.add_entry_effects_type(entry_effects_type);
-  builder_.add_travel_duration_sec(travel_duration_sec);
+  builder_.add_cosmetic_travel_duration_sec(cosmetic_travel_duration_sec);
   builder_.add_actual_final_position(actual_final_position);
   builder_.add_calculated_target_position(calculated_target_position);
   builder_.add_actual_start_position(actual_start_position);
@@ -1451,7 +1373,7 @@ inline ::flatbuffers::Offset<S2C_RiftStepInitiatedMsg> CreateS2C_RiftStepInitiat
     const RiftForged::Networking::Shared::Vec3 *actual_start_position = nullptr,
     const RiftForged::Networking::Shared::Vec3 *calculated_target_position = nullptr,
     const RiftForged::Networking::Shared::Vec3 *actual_final_position = nullptr,
-    float travel_duration_sec = 1.0f,
+    float cosmetic_travel_duration_sec = 0.25f,
     const std::vector<int8_t> *entry_effects_type = nullptr,
     const std::vector<::flatbuffers::Offset<void>> *entry_effects = nullptr,
     const std::vector<int8_t> *exit_effects_type = nullptr,
@@ -1472,7 +1394,7 @@ inline ::flatbuffers::Offset<S2C_RiftStepInitiatedMsg> CreateS2C_RiftStepInitiat
       actual_start_position,
       calculated_target_position,
       actual_final_position,
-      travel_duration_sec,
+      cosmetic_travel_duration_sec,
       entry_effects_type__,
       entry_effects__,
       exit_effects_type__,
@@ -1715,6 +1637,84 @@ inline ::flatbuffers::Offset<S2C_PongMsg> CreateS2C_PongMsg(
 
 ::flatbuffers::Offset<S2C_PongMsg> CreateS2C_PongMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_PongMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct S2C_SystemBroadcastMsgT : public ::flatbuffers::NativeTable {
+  typedef S2C_SystemBroadcastMsg TableType;
+  std::string message_text{};
+  std::string sender_name{};
+};
+
+struct S2C_SystemBroadcastMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef S2C_SystemBroadcastMsgT NativeTableType;
+  typedef S2C_SystemBroadcastMsgBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_MESSAGE_TEXT = 4,
+    VT_SENDER_NAME = 6
+  };
+  const ::flatbuffers::String *message_text() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_MESSAGE_TEXT);
+  }
+  const ::flatbuffers::String *sender_name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_SENDER_NAME);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffsetRequired(verifier, VT_MESSAGE_TEXT) &&
+           verifier.VerifyString(message_text()) &&
+           VerifyOffset(verifier, VT_SENDER_NAME) &&
+           verifier.VerifyString(sender_name()) &&
+           verifier.EndTable();
+  }
+  S2C_SystemBroadcastMsgT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(S2C_SystemBroadcastMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<S2C_SystemBroadcastMsg> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SystemBroadcastMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct S2C_SystemBroadcastMsgBuilder {
+  typedef S2C_SystemBroadcastMsg Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_message_text(::flatbuffers::Offset<::flatbuffers::String> message_text) {
+    fbb_.AddOffset(S2C_SystemBroadcastMsg::VT_MESSAGE_TEXT, message_text);
+  }
+  void add_sender_name(::flatbuffers::Offset<::flatbuffers::String> sender_name) {
+    fbb_.AddOffset(S2C_SystemBroadcastMsg::VT_SENDER_NAME, sender_name);
+  }
+  explicit S2C_SystemBroadcastMsgBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<S2C_SystemBroadcastMsg> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<S2C_SystemBroadcastMsg>(end);
+    fbb_.Required(o, S2C_SystemBroadcastMsg::VT_MESSAGE_TEXT);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<S2C_SystemBroadcastMsg> CreateS2C_SystemBroadcastMsg(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> message_text = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> sender_name = 0) {
+  S2C_SystemBroadcastMsgBuilder builder_(_fbb);
+  builder_.add_sender_name(sender_name);
+  builder_.add_message_text(message_text);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<S2C_SystemBroadcastMsg> CreateS2C_SystemBroadcastMsgDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *message_text = nullptr,
+    const char *sender_name = nullptr) {
+  auto message_text__ = message_text ? _fbb.CreateString(message_text) : 0;
+  auto sender_name__ = sender_name ? _fbb.CreateString(sender_name) : 0;
+  return RiftForged::Networking::UDP::S2C::CreateS2C_SystemBroadcastMsg(
+      _fbb,
+      message_text__,
+      sender_name__);
+}
+
+::flatbuffers::Offset<S2C_SystemBroadcastMsg> CreateS2C_SystemBroadcastMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SystemBroadcastMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct Root_S2C_UDP_MessageT : public ::flatbuffers::NativeTable {
   typedef Root_S2C_UDP_Message TableType;
   RiftForged::Networking::UDP::S2C::S2C_UDP_PayloadUnion payload{};
@@ -1821,35 +1821,6 @@ inline ::flatbuffers::Offset<Root_S2C_UDP_Message> CreateRoot_S2C_UDP_Message(
 }
 
 ::flatbuffers::Offset<Root_S2C_UDP_Message> CreateRoot_S2C_UDP_Message(::flatbuffers::FlatBufferBuilder &_fbb, const Root_S2C_UDP_MessageT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
-
-inline S2C_SystemBroadcastMsgT *S2C_SystemBroadcastMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
-  auto _o = std::unique_ptr<S2C_SystemBroadcastMsgT>(new S2C_SystemBroadcastMsgT());
-  UnPackTo(_o.get(), _resolver);
-  return _o.release();
-}
-
-inline void S2C_SystemBroadcastMsg::UnPackTo(S2C_SystemBroadcastMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
-  (void)_o;
-  (void)_resolver;
-  { auto _e = message_text(); if (_e) _o->message_text = _e->str(); }
-  { auto _e = sender_name(); if (_e) _o->sender_name = _e->str(); }
-}
-
-inline ::flatbuffers::Offset<S2C_SystemBroadcastMsg> S2C_SystemBroadcastMsg::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SystemBroadcastMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
-  return CreateS2C_SystemBroadcastMsg(_fbb, _o, _rehasher);
-}
-
-inline ::flatbuffers::Offset<S2C_SystemBroadcastMsg> CreateS2C_SystemBroadcastMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SystemBroadcastMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
-  (void)_rehasher;
-  (void)_o;
-  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const S2C_SystemBroadcastMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
-  auto _message_text = _fbb.CreateString(_o->message_text);
-  auto _sender_name = _o->sender_name.empty() ? 0 : _fbb.CreateString(_o->sender_name);
-  return RiftForged::Networking::UDP::S2C::CreateS2C_SystemBroadcastMsg(
-      _fbb,
-      _message_text,
-      _sender_name);
-}
 
 inline Effect_AreaDamageDataT::Effect_AreaDamageDataT(const Effect_AreaDamageDataT &o)
       : area_center((o.area_center) ? new RiftForged::Networking::Shared::Vec3(*o.area_center) : nullptr),
@@ -2160,7 +2131,7 @@ inline S2C_RiftStepInitiatedMsgT::S2C_RiftStepInitiatedMsgT(const S2C_RiftStepIn
         actual_start_position((o.actual_start_position) ? new RiftForged::Networking::Shared::Vec3(*o.actual_start_position) : nullptr),
         calculated_target_position((o.calculated_target_position) ? new RiftForged::Networking::Shared::Vec3(*o.calculated_target_position) : nullptr),
         actual_final_position((o.actual_final_position) ? new RiftForged::Networking::Shared::Vec3(*o.actual_final_position) : nullptr),
-        travel_duration_sec(o.travel_duration_sec),
+        cosmetic_travel_duration_sec(o.cosmetic_travel_duration_sec),
         entry_effects(o.entry_effects),
         exit_effects(o.exit_effects),
         start_vfx_id(o.start_vfx_id),
@@ -2173,7 +2144,7 @@ inline S2C_RiftStepInitiatedMsgT &S2C_RiftStepInitiatedMsgT::operator=(S2C_RiftS
   std::swap(actual_start_position, o.actual_start_position);
   std::swap(calculated_target_position, o.calculated_target_position);
   std::swap(actual_final_position, o.actual_final_position);
-  std::swap(travel_duration_sec, o.travel_duration_sec);
+  std::swap(cosmetic_travel_duration_sec, o.cosmetic_travel_duration_sec);
   std::swap(entry_effects, o.entry_effects);
   std::swap(exit_effects, o.exit_effects);
   std::swap(start_vfx_id, o.start_vfx_id);
@@ -2195,7 +2166,7 @@ inline void S2C_RiftStepInitiatedMsg::UnPackTo(S2C_RiftStepInitiatedMsgT *_o, co
   { auto _e = actual_start_position(); if (_e) _o->actual_start_position = std::unique_ptr<RiftForged::Networking::Shared::Vec3>(new RiftForged::Networking::Shared::Vec3(*_e)); }
   { auto _e = calculated_target_position(); if (_e) _o->calculated_target_position = std::unique_ptr<RiftForged::Networking::Shared::Vec3>(new RiftForged::Networking::Shared::Vec3(*_e)); }
   { auto _e = actual_final_position(); if (_e) _o->actual_final_position = std::unique_ptr<RiftForged::Networking::Shared::Vec3>(new RiftForged::Networking::Shared::Vec3(*_e)); }
-  { auto _e = travel_duration_sec(); _o->travel_duration_sec = _e; }
+  { auto _e = cosmetic_travel_duration_sec(); _o->cosmetic_travel_duration_sec = _e; }
   { auto _e = entry_effects_type(); if (_e) { _o->entry_effects.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->entry_effects[_i].type = static_cast<RiftForged::Networking::UDP::S2C::RiftStepEffectPayload>(_e->Get(_i)); } } else { _o->entry_effects.resize(0); } }
   { auto _e = entry_effects(); if (_e) { _o->entry_effects.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->entry_effects[_i].value = RiftForged::Networking::UDP::S2C::RiftStepEffectPayloadUnion::UnPack(_e->Get(_i), entry_effects_type()->GetEnum<RiftStepEffectPayload>(_i), _resolver); } } else { _o->entry_effects.resize(0); } }
   { auto _e = exit_effects_type(); if (_e) { _o->exit_effects.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->exit_effects[_i].type = static_cast<RiftForged::Networking::UDP::S2C::RiftStepEffectPayload>(_e->Get(_i)); } } else { _o->exit_effects.resize(0); } }
@@ -2217,7 +2188,7 @@ inline ::flatbuffers::Offset<S2C_RiftStepInitiatedMsg> CreateS2C_RiftStepInitiat
   auto _actual_start_position = _o->actual_start_position ? _o->actual_start_position.get() : nullptr;
   auto _calculated_target_position = _o->calculated_target_position ? _o->calculated_target_position.get() : nullptr;
   auto _actual_final_position = _o->actual_final_position ? _o->actual_final_position.get() : nullptr;
-  auto _travel_duration_sec = _o->travel_duration_sec;
+  auto _cosmetic_travel_duration_sec = _o->cosmetic_travel_duration_sec;
   auto _entry_effects_type = _o->entry_effects.size() ? _fbb.CreateVector<int8_t>(_o->entry_effects.size(), [](size_t i, _VectorArgs *__va) { return static_cast<int8_t>(__va->__o->entry_effects[i].type); }, &_va) : 0;
   auto _entry_effects = _o->entry_effects.size() ? _fbb.CreateVector<::flatbuffers::Offset<void>>(_o->entry_effects.size(), [](size_t i, _VectorArgs *__va) { return __va->__o->entry_effects[i].Pack(*__va->__fbb, __va->__rehasher); }, &_va) : 0;
   auto _exit_effects_type = _o->exit_effects.size() ? _fbb.CreateVector<int8_t>(_o->exit_effects.size(), [](size_t i, _VectorArgs *__va) { return static_cast<int8_t>(__va->__o->exit_effects[i].type); }, &_va) : 0;
@@ -2231,7 +2202,7 @@ inline ::flatbuffers::Offset<S2C_RiftStepInitiatedMsg> CreateS2C_RiftStepInitiat
       _actual_start_position,
       _calculated_target_position,
       _actual_final_position,
-      _travel_duration_sec,
+      _cosmetic_travel_duration_sec,
       _entry_effects_type,
       _entry_effects,
       _exit_effects_type,
@@ -2335,6 +2306,35 @@ inline ::flatbuffers::Offset<S2C_PongMsg> CreateS2C_PongMsg(::flatbuffers::FlatB
       _fbb,
       _client_timestamp_ms,
       _server_timestamp_ms);
+}
+
+inline S2C_SystemBroadcastMsgT *S2C_SystemBroadcastMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<S2C_SystemBroadcastMsgT>(new S2C_SystemBroadcastMsgT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void S2C_SystemBroadcastMsg::UnPackTo(S2C_SystemBroadcastMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = message_text(); if (_e) _o->message_text = _e->str(); }
+  { auto _e = sender_name(); if (_e) _o->sender_name = _e->str(); }
+}
+
+inline ::flatbuffers::Offset<S2C_SystemBroadcastMsg> S2C_SystemBroadcastMsg::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SystemBroadcastMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateS2C_SystemBroadcastMsg(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<S2C_SystemBroadcastMsg> CreateS2C_SystemBroadcastMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SystemBroadcastMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const S2C_SystemBroadcastMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _message_text = _fbb.CreateString(_o->message_text);
+  auto _sender_name = _o->sender_name.empty() ? 0 : _fbb.CreateString(_o->sender_name);
+  return RiftForged::Networking::UDP::S2C::CreateS2C_SystemBroadcastMsg(
+      _fbb,
+      _message_text,
+      _sender_name);
 }
 
 inline Root_S2C_UDP_MessageT *Root_S2C_UDP_Message::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {

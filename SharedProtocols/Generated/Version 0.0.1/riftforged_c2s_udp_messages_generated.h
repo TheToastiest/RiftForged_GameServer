@@ -24,6 +24,10 @@ struct C2S_MovementInputMsg;
 struct C2S_MovementInputMsgBuilder;
 struct C2S_MovementInputMsgT;
 
+struct C2S_TurnIntentMsg;
+struct C2S_TurnIntentMsgBuilder;
+struct C2S_TurnIntentMsgT;
+
 struct C2S_RiftStepActivationMsg;
 struct C2S_RiftStepActivationMsgBuilder;
 struct C2S_RiftStepActivationMsgT;
@@ -82,17 +86,19 @@ inline const char *EnumNameRiftStepDirectionalIntent(RiftStepDirectionalIntent e
 enum C2S_UDP_Payload : uint8_t {
   C2S_UDP_Payload_NONE = 0,
   C2S_UDP_Payload_MovementInput = 1,
-  C2S_UDP_Payload_RiftStepActivation = 2,
-  C2S_UDP_Payload_UseAbility = 3,
-  C2S_UDP_Payload_Ping = 4,
+  C2S_UDP_Payload_TurnIntent = 2,
+  C2S_UDP_Payload_RiftStepActivation = 3,
+  C2S_UDP_Payload_UseAbility = 4,
+  C2S_UDP_Payload_Ping = 5,
   C2S_UDP_Payload_MIN = C2S_UDP_Payload_NONE,
   C2S_UDP_Payload_MAX = C2S_UDP_Payload_Ping
 };
 
-inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[5] {
+inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[6] {
   static const C2S_UDP_Payload values[] = {
     C2S_UDP_Payload_NONE,
     C2S_UDP_Payload_MovementInput,
+    C2S_UDP_Payload_TurnIntent,
     C2S_UDP_Payload_RiftStepActivation,
     C2S_UDP_Payload_UseAbility,
     C2S_UDP_Payload_Ping
@@ -101,9 +107,10 @@ inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[5] {
 }
 
 inline const char * const *EnumNamesC2S_UDP_Payload() {
-  static const char * const names[6] = {
+  static const char * const names[7] = {
     "NONE",
     "MovementInput",
+    "TurnIntent",
     "RiftStepActivation",
     "UseAbility",
     "Ping",
@@ -126,6 +133,10 @@ template<> struct C2S_UDP_PayloadTraits<RiftForged::Networking::UDP::C2S::C2S_Mo
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_MovementInput;
 };
 
+template<> struct C2S_UDP_PayloadTraits<RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg> {
+  static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_TurnIntent;
+};
+
 template<> struct C2S_UDP_PayloadTraits<RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg> {
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_RiftStepActivation;
 };
@@ -144,6 +155,10 @@ template<typename T> struct C2S_UDP_PayloadUnionTraits {
 
 template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C2S_MovementInputMsgT> {
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_MovementInput;
+};
+
+template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT> {
+  static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_TurnIntent;
 };
 
 template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT> {
@@ -196,6 +211,14 @@ struct C2S_UDP_PayloadUnion {
     return type == C2S_UDP_Payload_MovementInput ?
       reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_MovementInputMsgT *>(value) : nullptr;
   }
+  RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT *AsTurnIntent() {
+    return type == C2S_UDP_Payload_TurnIntent ?
+      reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT *>(value) : nullptr;
+  }
+  const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT *AsTurnIntent() const {
+    return type == C2S_UDP_Payload_TurnIntent ?
+      reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT *>(value) : nullptr;
+  }
   RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT *AsRiftStepActivation() {
     return type == C2S_UDP_Payload_RiftStepActivation ?
       reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT *>(value) : nullptr;
@@ -227,8 +250,8 @@ bool VerifyC2S_UDP_PayloadVector(::flatbuffers::Verifier &verifier, const ::flat
 
 struct C2S_MovementInputMsgT : public ::flatbuffers::NativeTable {
   typedef C2S_MovementInputMsg TableType;
-  uint64_t timestamp_ms = 0;
-  std::unique_ptr<RiftForged::Networking::Shared::Vec3> desired_direction{};
+  uint64_t client_timestamp_ms = 0;
+  std::unique_ptr<RiftForged::Networking::Shared::Vec3> local_direction_intent{};
   bool is_sprinting = false;
   C2S_MovementInputMsgT() = default;
   C2S_MovementInputMsgT(const C2S_MovementInputMsgT &o);
@@ -240,23 +263,23 @@ struct C2S_MovementInputMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Tab
   typedef C2S_MovementInputMsgT NativeTableType;
   typedef C2S_MovementInputMsgBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_TIMESTAMP_MS = 4,
-    VT_DESIRED_DIRECTION = 6,
+    VT_CLIENT_TIMESTAMP_MS = 4,
+    VT_LOCAL_DIRECTION_INTENT = 6,
     VT_IS_SPRINTING = 8
   };
-  uint64_t timestamp_ms() const {
-    return GetField<uint64_t>(VT_TIMESTAMP_MS, 0);
+  uint64_t client_timestamp_ms() const {
+    return GetField<uint64_t>(VT_CLIENT_TIMESTAMP_MS, 0);
   }
-  const RiftForged::Networking::Shared::Vec3 *desired_direction() const {
-    return GetStruct<const RiftForged::Networking::Shared::Vec3 *>(VT_DESIRED_DIRECTION);
+  const RiftForged::Networking::Shared::Vec3 *local_direction_intent() const {
+    return GetStruct<const RiftForged::Networking::Shared::Vec3 *>(VT_LOCAL_DIRECTION_INTENT);
   }
   bool is_sprinting() const {
     return GetField<uint8_t>(VT_IS_SPRINTING, 0) != 0;
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_TIMESTAMP_MS, 8) &&
-           VerifyField<RiftForged::Networking::Shared::Vec3>(verifier, VT_DESIRED_DIRECTION, 4) &&
+           VerifyField<uint64_t>(verifier, VT_CLIENT_TIMESTAMP_MS, 8) &&
+           VerifyFieldRequired<RiftForged::Networking::Shared::Vec3>(verifier, VT_LOCAL_DIRECTION_INTENT, 4) &&
            VerifyField<uint8_t>(verifier, VT_IS_SPRINTING, 1) &&
            verifier.EndTable();
   }
@@ -269,11 +292,11 @@ struct C2S_MovementInputMsgBuilder {
   typedef C2S_MovementInputMsg Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_timestamp_ms(uint64_t timestamp_ms) {
-    fbb_.AddElement<uint64_t>(C2S_MovementInputMsg::VT_TIMESTAMP_MS, timestamp_ms, 0);
+  void add_client_timestamp_ms(uint64_t client_timestamp_ms) {
+    fbb_.AddElement<uint64_t>(C2S_MovementInputMsg::VT_CLIENT_TIMESTAMP_MS, client_timestamp_ms, 0);
   }
-  void add_desired_direction(const RiftForged::Networking::Shared::Vec3 *desired_direction) {
-    fbb_.AddStruct(C2S_MovementInputMsg::VT_DESIRED_DIRECTION, desired_direction);
+  void add_local_direction_intent(const RiftForged::Networking::Shared::Vec3 *local_direction_intent) {
+    fbb_.AddStruct(C2S_MovementInputMsg::VT_LOCAL_DIRECTION_INTENT, local_direction_intent);
   }
   void add_is_sprinting(bool is_sprinting) {
     fbb_.AddElement<uint8_t>(C2S_MovementInputMsg::VT_IS_SPRINTING, static_cast<uint8_t>(is_sprinting), 0);
@@ -285,23 +308,87 @@ struct C2S_MovementInputMsgBuilder {
   ::flatbuffers::Offset<C2S_MovementInputMsg> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = ::flatbuffers::Offset<C2S_MovementInputMsg>(end);
+    fbb_.Required(o, C2S_MovementInputMsg::VT_LOCAL_DIRECTION_INTENT);
     return o;
   }
 };
 
 inline ::flatbuffers::Offset<C2S_MovementInputMsg> CreateC2S_MovementInputMsg(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t timestamp_ms = 0,
-    const RiftForged::Networking::Shared::Vec3 *desired_direction = nullptr,
+    uint64_t client_timestamp_ms = 0,
+    const RiftForged::Networking::Shared::Vec3 *local_direction_intent = nullptr,
     bool is_sprinting = false) {
   C2S_MovementInputMsgBuilder builder_(_fbb);
-  builder_.add_timestamp_ms(timestamp_ms);
-  builder_.add_desired_direction(desired_direction);
+  builder_.add_client_timestamp_ms(client_timestamp_ms);
+  builder_.add_local_direction_intent(local_direction_intent);
   builder_.add_is_sprinting(is_sprinting);
   return builder_.Finish();
 }
 
 ::flatbuffers::Offset<C2S_MovementInputMsg> CreateC2S_MovementInputMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_MovementInputMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct C2S_TurnIntentMsgT : public ::flatbuffers::NativeTable {
+  typedef C2S_TurnIntentMsg TableType;
+  uint64_t client_timestamp_ms = 0;
+  float turn_delta_degrees = 0.0f;
+};
+
+struct C2S_TurnIntentMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef C2S_TurnIntentMsgT NativeTableType;
+  typedef C2S_TurnIntentMsgBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_CLIENT_TIMESTAMP_MS = 4,
+    VT_TURN_DELTA_DEGREES = 6
+  };
+  uint64_t client_timestamp_ms() const {
+    return GetField<uint64_t>(VT_CLIENT_TIMESTAMP_MS, 0);
+  }
+  float turn_delta_degrees() const {
+    return GetField<float>(VT_TURN_DELTA_DEGREES, 0.0f);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_CLIENT_TIMESTAMP_MS, 8) &&
+           VerifyField<float>(verifier, VT_TURN_DELTA_DEGREES, 4) &&
+           verifier.EndTable();
+  }
+  C2S_TurnIntentMsgT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(C2S_TurnIntentMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<C2S_TurnIntentMsg> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_TurnIntentMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct C2S_TurnIntentMsgBuilder {
+  typedef C2S_TurnIntentMsg Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_client_timestamp_ms(uint64_t client_timestamp_ms) {
+    fbb_.AddElement<uint64_t>(C2S_TurnIntentMsg::VT_CLIENT_TIMESTAMP_MS, client_timestamp_ms, 0);
+  }
+  void add_turn_delta_degrees(float turn_delta_degrees) {
+    fbb_.AddElement<float>(C2S_TurnIntentMsg::VT_TURN_DELTA_DEGREES, turn_delta_degrees, 0.0f);
+  }
+  explicit C2S_TurnIntentMsgBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<C2S_TurnIntentMsg> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<C2S_TurnIntentMsg>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<C2S_TurnIntentMsg> CreateC2S_TurnIntentMsg(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t client_timestamp_ms = 0,
+    float turn_delta_degrees = 0.0f) {
+  C2S_TurnIntentMsgBuilder builder_(_fbb);
+  builder_.add_client_timestamp_ms(client_timestamp_ms);
+  builder_.add_turn_delta_degrees(turn_delta_degrees);
+  return builder_.Finish();
+}
+
+::flatbuffers::Offset<C2S_TurnIntentMsg> CreateC2S_TurnIntentMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_TurnIntentMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
 struct C2S_RiftStepActivationMsgT : public ::flatbuffers::NativeTable {
   typedef C2S_RiftStepActivationMsg TableType;
@@ -368,7 +455,7 @@ inline ::flatbuffers::Offset<C2S_RiftStepActivationMsg> CreateC2S_RiftStepActiva
 
 struct C2S_UseAbilityMsgT : public ::flatbuffers::NativeTable {
   typedef C2S_UseAbilityMsg TableType;
-  uint64_t timestamp_ms = 0;
+  uint64_t client_timestamp_ms = 0;
   uint32_t ability_id = 0;
   uint64_t target_entity_id = 0;
   std::unique_ptr<RiftForged::Networking::Shared::Vec3> target_position{};
@@ -382,13 +469,13 @@ struct C2S_UseAbilityMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table 
   typedef C2S_UseAbilityMsgT NativeTableType;
   typedef C2S_UseAbilityMsgBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_TIMESTAMP_MS = 4,
+    VT_CLIENT_TIMESTAMP_MS = 4,
     VT_ABILITY_ID = 6,
     VT_TARGET_ENTITY_ID = 8,
     VT_TARGET_POSITION = 10
   };
-  uint64_t timestamp_ms() const {
-    return GetField<uint64_t>(VT_TIMESTAMP_MS, 0);
+  uint64_t client_timestamp_ms() const {
+    return GetField<uint64_t>(VT_CLIENT_TIMESTAMP_MS, 0);
   }
   uint32_t ability_id() const {
     return GetField<uint32_t>(VT_ABILITY_ID, 0);
@@ -401,7 +488,7 @@ struct C2S_UseAbilityMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table 
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_TIMESTAMP_MS, 8) &&
+           VerifyField<uint64_t>(verifier, VT_CLIENT_TIMESTAMP_MS, 8) &&
            VerifyField<uint32_t>(verifier, VT_ABILITY_ID, 4) &&
            VerifyField<uint64_t>(verifier, VT_TARGET_ENTITY_ID, 8) &&
            VerifyField<RiftForged::Networking::Shared::Vec3>(verifier, VT_TARGET_POSITION, 4) &&
@@ -416,8 +503,8 @@ struct C2S_UseAbilityMsgBuilder {
   typedef C2S_UseAbilityMsg Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_timestamp_ms(uint64_t timestamp_ms) {
-    fbb_.AddElement<uint64_t>(C2S_UseAbilityMsg::VT_TIMESTAMP_MS, timestamp_ms, 0);
+  void add_client_timestamp_ms(uint64_t client_timestamp_ms) {
+    fbb_.AddElement<uint64_t>(C2S_UseAbilityMsg::VT_CLIENT_TIMESTAMP_MS, client_timestamp_ms, 0);
   }
   void add_ability_id(uint32_t ability_id) {
     fbb_.AddElement<uint32_t>(C2S_UseAbilityMsg::VT_ABILITY_ID, ability_id, 0);
@@ -441,13 +528,13 @@ struct C2S_UseAbilityMsgBuilder {
 
 inline ::flatbuffers::Offset<C2S_UseAbilityMsg> CreateC2S_UseAbilityMsg(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t timestamp_ms = 0,
+    uint64_t client_timestamp_ms = 0,
     uint32_t ability_id = 0,
     uint64_t target_entity_id = 0,
     const RiftForged::Networking::Shared::Vec3 *target_position = nullptr) {
   C2S_UseAbilityMsgBuilder builder_(_fbb);
   builder_.add_target_entity_id(target_entity_id);
-  builder_.add_timestamp_ms(timestamp_ms);
+  builder_.add_client_timestamp_ms(client_timestamp_ms);
   builder_.add_target_position(target_position);
   builder_.add_ability_id(ability_id);
   return builder_.Finish();
@@ -529,6 +616,9 @@ struct Root_C2S_UDP_Message FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Tab
   const RiftForged::Networking::UDP::C2S::C2S_MovementInputMsg *payload_as_MovementInput() const {
     return payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_MovementInput ? static_cast<const RiftForged::Networking::UDP::C2S::C2S_MovementInputMsg *>(payload()) : nullptr;
   }
+  const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg *payload_as_TurnIntent() const {
+    return payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_TurnIntent ? static_cast<const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg *>(payload()) : nullptr;
+  }
   const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *payload_as_RiftStepActivation() const {
     return payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_RiftStepActivation ? static_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *>(payload()) : nullptr;
   }
@@ -552,6 +642,10 @@ struct Root_C2S_UDP_Message FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Tab
 
 template<> inline const RiftForged::Networking::UDP::C2S::C2S_MovementInputMsg *Root_C2S_UDP_Message::payload_as<RiftForged::Networking::UDP::C2S::C2S_MovementInputMsg>() const {
   return payload_as_MovementInput();
+}
+
+template<> inline const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg *Root_C2S_UDP_Message::payload_as<RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg>() const {
+  return payload_as_TurnIntent();
 }
 
 template<> inline const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *Root_C2S_UDP_Message::payload_as<RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg>() const {
@@ -601,14 +695,14 @@ inline ::flatbuffers::Offset<Root_C2S_UDP_Message> CreateRoot_C2S_UDP_Message(
 ::flatbuffers::Offset<Root_C2S_UDP_Message> CreateRoot_C2S_UDP_Message(::flatbuffers::FlatBufferBuilder &_fbb, const Root_C2S_UDP_MessageT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
 inline C2S_MovementInputMsgT::C2S_MovementInputMsgT(const C2S_MovementInputMsgT &o)
-      : timestamp_ms(o.timestamp_ms),
-        desired_direction((o.desired_direction) ? new RiftForged::Networking::Shared::Vec3(*o.desired_direction) : nullptr),
+      : client_timestamp_ms(o.client_timestamp_ms),
+        local_direction_intent((o.local_direction_intent) ? new RiftForged::Networking::Shared::Vec3(*o.local_direction_intent) : nullptr),
         is_sprinting(o.is_sprinting) {
 }
 
 inline C2S_MovementInputMsgT &C2S_MovementInputMsgT::operator=(C2S_MovementInputMsgT o) FLATBUFFERS_NOEXCEPT {
-  std::swap(timestamp_ms, o.timestamp_ms);
-  std::swap(desired_direction, o.desired_direction);
+  std::swap(client_timestamp_ms, o.client_timestamp_ms);
+  std::swap(local_direction_intent, o.local_direction_intent);
   std::swap(is_sprinting, o.is_sprinting);
   return *this;
 }
@@ -622,8 +716,8 @@ inline C2S_MovementInputMsgT *C2S_MovementInputMsg::UnPack(const ::flatbuffers::
 inline void C2S_MovementInputMsg::UnPackTo(C2S_MovementInputMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
-  { auto _e = timestamp_ms(); _o->timestamp_ms = _e; }
-  { auto _e = desired_direction(); if (_e) _o->desired_direction = std::unique_ptr<RiftForged::Networking::Shared::Vec3>(new RiftForged::Networking::Shared::Vec3(*_e)); }
+  { auto _e = client_timestamp_ms(); _o->client_timestamp_ms = _e; }
+  { auto _e = local_direction_intent(); if (_e) _o->local_direction_intent = std::unique_ptr<RiftForged::Networking::Shared::Vec3>(new RiftForged::Networking::Shared::Vec3(*_e)); }
   { auto _e = is_sprinting(); _o->is_sprinting = _e; }
 }
 
@@ -635,14 +729,43 @@ inline ::flatbuffers::Offset<C2S_MovementInputMsg> CreateC2S_MovementInputMsg(::
   (void)_rehasher;
   (void)_o;
   struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const C2S_MovementInputMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
-  auto _timestamp_ms = _o->timestamp_ms;
-  auto _desired_direction = _o->desired_direction ? _o->desired_direction.get() : nullptr;
+  auto _client_timestamp_ms = _o->client_timestamp_ms;
+  auto _local_direction_intent = _o->local_direction_intent ? _o->local_direction_intent.get() : nullptr;
   auto _is_sprinting = _o->is_sprinting;
   return RiftForged::Networking::UDP::C2S::CreateC2S_MovementInputMsg(
       _fbb,
-      _timestamp_ms,
-      _desired_direction,
+      _client_timestamp_ms,
+      _local_direction_intent,
       _is_sprinting);
+}
+
+inline C2S_TurnIntentMsgT *C2S_TurnIntentMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<C2S_TurnIntentMsgT>(new C2S_TurnIntentMsgT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void C2S_TurnIntentMsg::UnPackTo(C2S_TurnIntentMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = client_timestamp_ms(); _o->client_timestamp_ms = _e; }
+  { auto _e = turn_delta_degrees(); _o->turn_delta_degrees = _e; }
+}
+
+inline ::flatbuffers::Offset<C2S_TurnIntentMsg> C2S_TurnIntentMsg::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_TurnIntentMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateC2S_TurnIntentMsg(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<C2S_TurnIntentMsg> CreateC2S_TurnIntentMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_TurnIntentMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const C2S_TurnIntentMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _client_timestamp_ms = _o->client_timestamp_ms;
+  auto _turn_delta_degrees = _o->turn_delta_degrees;
+  return RiftForged::Networking::UDP::C2S::CreateC2S_TurnIntentMsg(
+      _fbb,
+      _client_timestamp_ms,
+      _turn_delta_degrees);
 }
 
 inline C2S_RiftStepActivationMsgT *C2S_RiftStepActivationMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
@@ -675,14 +798,14 @@ inline ::flatbuffers::Offset<C2S_RiftStepActivationMsg> CreateC2S_RiftStepActiva
 }
 
 inline C2S_UseAbilityMsgT::C2S_UseAbilityMsgT(const C2S_UseAbilityMsgT &o)
-      : timestamp_ms(o.timestamp_ms),
+      : client_timestamp_ms(o.client_timestamp_ms),
         ability_id(o.ability_id),
         target_entity_id(o.target_entity_id),
         target_position((o.target_position) ? new RiftForged::Networking::Shared::Vec3(*o.target_position) : nullptr) {
 }
 
 inline C2S_UseAbilityMsgT &C2S_UseAbilityMsgT::operator=(C2S_UseAbilityMsgT o) FLATBUFFERS_NOEXCEPT {
-  std::swap(timestamp_ms, o.timestamp_ms);
+  std::swap(client_timestamp_ms, o.client_timestamp_ms);
   std::swap(ability_id, o.ability_id);
   std::swap(target_entity_id, o.target_entity_id);
   std::swap(target_position, o.target_position);
@@ -698,7 +821,7 @@ inline C2S_UseAbilityMsgT *C2S_UseAbilityMsg::UnPack(const ::flatbuffers::resolv
 inline void C2S_UseAbilityMsg::UnPackTo(C2S_UseAbilityMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
-  { auto _e = timestamp_ms(); _o->timestamp_ms = _e; }
+  { auto _e = client_timestamp_ms(); _o->client_timestamp_ms = _e; }
   { auto _e = ability_id(); _o->ability_id = _e; }
   { auto _e = target_entity_id(); _o->target_entity_id = _e; }
   { auto _e = target_position(); if (_e) _o->target_position = std::unique_ptr<RiftForged::Networking::Shared::Vec3>(new RiftForged::Networking::Shared::Vec3(*_e)); }
@@ -712,13 +835,13 @@ inline ::flatbuffers::Offset<C2S_UseAbilityMsg> CreateC2S_UseAbilityMsg(::flatbu
   (void)_rehasher;
   (void)_o;
   struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const C2S_UseAbilityMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
-  auto _timestamp_ms = _o->timestamp_ms;
+  auto _client_timestamp_ms = _o->client_timestamp_ms;
   auto _ability_id = _o->ability_id;
   auto _target_entity_id = _o->target_entity_id;
   auto _target_position = _o->target_position ? _o->target_position.get() : nullptr;
   return RiftForged::Networking::UDP::C2S::CreateC2S_UseAbilityMsg(
       _fbb,
-      _timestamp_ms,
+      _client_timestamp_ms,
       _ability_id,
       _target_entity_id,
       _target_position);
@@ -788,6 +911,10 @@ inline bool VerifyC2S_UDP_Payload(::flatbuffers::Verifier &verifier, const void 
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_MovementInputMsg *>(obj);
       return verifier.VerifyTable(ptr);
     }
+    case C2S_UDP_Payload_TurnIntent: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
     case C2S_UDP_Payload_RiftStepActivation: {
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *>(obj);
       return verifier.VerifyTable(ptr);
@@ -823,6 +950,10 @@ inline void *C2S_UDP_PayloadUnion::UnPack(const void *obj, C2S_UDP_Payload type,
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_MovementInputMsg *>(obj);
       return ptr->UnPack(resolver);
     }
+    case C2S_UDP_Payload_TurnIntent: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg *>(obj);
+      return ptr->UnPack(resolver);
+    }
     case C2S_UDP_Payload_RiftStepActivation: {
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *>(obj);
       return ptr->UnPack(resolver);
@@ -846,6 +977,10 @@ inline ::flatbuffers::Offset<void> C2S_UDP_PayloadUnion::Pack(::flatbuffers::Fla
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_MovementInputMsgT *>(value);
       return CreateC2S_MovementInputMsg(_fbb, ptr, _rehasher).Union();
     }
+    case C2S_UDP_Payload_TurnIntent: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT *>(value);
+      return CreateC2S_TurnIntentMsg(_fbb, ptr, _rehasher).Union();
+    }
     case C2S_UDP_Payload_RiftStepActivation: {
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT *>(value);
       return CreateC2S_RiftStepActivationMsg(_fbb, ptr, _rehasher).Union();
@@ -866,6 +1001,10 @@ inline C2S_UDP_PayloadUnion::C2S_UDP_PayloadUnion(const C2S_UDP_PayloadUnion &u)
   switch (type) {
     case C2S_UDP_Payload_MovementInput: {
       value = new RiftForged::Networking::UDP::C2S::C2S_MovementInputMsgT(*reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_MovementInputMsgT *>(u.value));
+      break;
+    }
+    case C2S_UDP_Payload_TurnIntent: {
+      value = new RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT(*reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT *>(u.value));
       break;
     }
     case C2S_UDP_Payload_RiftStepActivation: {
@@ -889,6 +1028,11 @@ inline void C2S_UDP_PayloadUnion::Reset() {
   switch (type) {
     case C2S_UDP_Payload_MovementInput: {
       auto ptr = reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_MovementInputMsgT *>(value);
+      delete ptr;
+      break;
+    }
+    case C2S_UDP_Payload_TurnIntent: {
+      auto ptr = reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsgT *>(value);
       delete ptr;
       break;
     }
