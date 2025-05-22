@@ -1,0 +1,68 @@
+﻿// File: Schemas/riftforged_c2s_udp_messages.fbs
+// Protocol Version: 0.0.1
+// Description: Defines messages for real-time UDP communication between
+//              the RiftForged game client and UDPServer.
+
+include "riftforged_common_types.fbs"; // Defines Shared.Vec3, Shared.Quaternion, Shared.DamageInstance, etc.
+
+//=============================================================================
+// Client-to-Server (C2S) UDP Messages
+//=============================================================================
+namespace RiftForged.Networking.UDP.C2S;
+
+// --- C2S Message Table Definitions ---
+table C2S_MovementInputMsg {
+  timestamp_ms:ulong;
+  desired_direction:RiftForged.Networking.Shared.Vec3;
+  is_sprinting:bool;
+}
+
+// For activating RiftStep with directional intent
+enum RiftStepDirectionalIntent : byte {
+  Default_Backward = 0,     // Key pressed alone, server calculates backward from current facing
+  Intentional_Forward = 1,  // Key pressed with forward movement input
+  Intentional_Backward = 2, // Key pressed with backward movement input
+  Intentional_Left = 3,     // Key pressed with strafe left input (relative to facing)
+  Intentional_Right = 4     // Key pressed with strafe right input (relative to facing)
+}
+
+table C2S_RiftStepActivationMsg {
+  client_timestamp_ms:ulong;
+  directional_intent:RiftStepDirectionalIntent = Default_Backward;
+}
+
+// Generic message for using an ability other than specific ones like RiftStep
+table C2S_UseAbilityMsg {
+  timestamp_ms:ulong;
+  ability_id:uint;    // Convention for Shared.AbilityDefID
+  target_entity_id:ulong; // 0 if no entity target
+  target_position:RiftForged.Networking.Shared.Vec3; // Zeroed if not a positional target
+  // aim_direction:RiftForged.Networking.Shared.Vec3; // Optional for skillshots
+}
+
+table C2S_PingMsg {
+  client_timestamp_ms:ulong;
+}
+
+//-----------------------------------------------------------------------------
+// C2S Union and Root Message
+//-----------------------------------------------------------------------------
+
+// --- C2S Union Definition ---
+
+
+// All C2S message tables are defined above before being used in this union.
+union C2S_UDP_Payload {
+  MovementInput:C2S_MovementInputMsg,
+  RiftStepActivation:C2S_RiftStepActivationMsg, // Changed from C2S_RiftStepMsg
+  UseAbility:C2S_UseAbilityMsg,
+  Ping:C2S_PingMsg
+}
+
+// --- C2S Root Message Definition ---
+
+table Root_C2S_UDP_Message {
+  payload:C2S_UDP_Payload (required);
+}
+// Declare root_type for this file
+root_type Root_C2S_UDP_Message;

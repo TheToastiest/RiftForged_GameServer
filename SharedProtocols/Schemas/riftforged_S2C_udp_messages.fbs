@@ -1,0 +1,181 @@
+﻿	// File: Schemas/riftforged_s2c_udp_messages.fbs
+// Protocol Version: 0.0.1
+// Description: Defines messages for real-time UDP communication between
+//              the RiftForged game client and UDPServer.
+
+include "riftforged_common_types.fbs"; // Defines Shared.Vec3, Shared.Quaternion, Shared.DamageInstance, etc.
+
+//=============================================================================
+// Server-to-Client (S2C) UDP Messages
+//=============================================================================
+
+namespace RiftForged.Networking.UDP.S2C;
+
+//-----------------------------------------------------------------------------
+// Supporting S2C Enums
+//-----------------------------------------------------------------------------
+
+// --- Supporting S2C Enums (if not in common_types and S2C specific) ---
+enum ResourceType : byte {
+  Will = 0,    // Player-specific core resource
+  Health = 1,
+  Shimmer_Notification = 2 // For UDP notification of Shimmer change
+}
+
+enum CombatEventType : byte {
+  DamageDealt = 0,
+  HealReceived = 1,
+  Miss = 2,
+  Dodge = 3,
+  Block = 4,
+  Parry = 5,
+  CriticalHit = 6,
+  AbilityInterrupt = 7
+}
+
+//-----------------------------------------------------------------------------
+// S2C Server Broadcast Message Definitions
+//-----------------------------------------------------------------------------
+
+// For server-initiated broadcast messages
+table S2C_SystemBroadcastMsg {
+  message_text:string (required);
+  sender_name:string; // e.g., "SYSTEM", "SERVER_ADMIN"
+}
+
+//-----------------------------------------------------------------------------
+// S2C Effect Data Table Definitions (for RiftStepEffectPayload)
+//-----------------------------------------------------------------------------
+
+// --- S2C Effect Data Table Definitions (for RiftStepEffectPayload) ---
+table Effect_AreaDamageData {
+  area_center:RiftForged.Networking.Shared.Vec3;
+  radius:float;
+  damage_info:RiftForged.Networking.Shared.DamageInstance;
+  // visual_effect_tag:string;
+}
+
+table Effect_AreaStunData {
+  area_center:RiftForged.Networking.Shared.Vec3;
+  radius:float;
+  stun_details:RiftForged.Networking.Shared.StunInstance; // Defined in common_types.fbs
+  // visual_effect_tag:string;
+}
+
+table Effect_ApplyBuffDebuffData {
+  buff_debuff_id:RiftForged.Networking.Shared.StatusEffectCategory;
+  duration_ms:uint;
+  // target_entity_id:ulong; // Optional, if not caster
+}
+
+table Effect_PersistentAreaData {
+  area_center:RiftForged.Networking.Shared.Vec3;
+  radius:float;
+  duration_ms:uint;
+  visual_effect_tag:string;
+  applied_effects_on_contact:[RiftForged.Networking.Shared.StatusEffectCategory];
+  // damage_over_time:RiftForged.Networking.Shared.DamageInstance;
+}
+
+//-----------------------------------------------------------------------------
+// S2C Combat Event Detail Table Definitions (for CombatEventPayload)
+//-----------------------------------------------------------------------------
+
+// --- S2C Combat Event Detail Table Definitions (for CombatEventPayload) ---
+table CombatEvent_DamageDealtDetails {
+  source_entity_id:ulong;
+  target_entity_id:ulong;
+  damage_info:RiftForged.Networking.Shared.DamageInstance;
+  is_kill:bool;
+}
+
+//-----------------------------------------------------------------------------
+// S2C Unions using the above tables
+//-----------------------------------------------------------------------------
+// It's good practice for unions to have a NONE type as the first (0) value.
+// --- S2C Unions using the above tables ---
+union RiftStepEffectPayload : byte {
+  //NONE_RiftStepEffect = 0, // Added NONE type
+  AreaDamage:Effect_AreaDamageData,
+  AreaStun:Effect_AreaStunData,
+  ApplyBuff:Effect_ApplyBuffDebuffData,
+  PersistentArea:Effect_PersistentAreaData
+}
+
+union CombatEventPayload : byte {
+  //NONE_CombatEvent = 0, // Added NONE type
+  DamageDealt:CombatEvent_DamageDealtDetails
+  // Add other specific combat event data table types here AFTER defining them above
+}
+
+//-----------------------------------------------------------------------------
+// Main S2C Message Table Definitions
+//-----------------------------------------------------------------------------
+
+// --- Main S2C Message Table Definitions ---
+table S2C_EntityStateUpdateMsg {
+  entity_id:ulong (key);
+  position:RiftForged.Networking.Shared.Vec3; // Structs are inlined. Default is (0,0,0).
+  orientation:RiftForged.Networking.Shared.Quaternion; // Default is (0,0,0,1) or (0,0,0,0)
+  current_health:int;
+  max_health:uint;
+  current_will:int;
+  max_will:uint;
+  server_timestamp_ms:ulong;
+  animation_state_id:uint;
+  active_status_effects:[RiftForged.Networking.Shared.StatusEffectCategory];
+  // velocity:RiftForged.Networking.Shared.Vec3;
+  // current_target_id:ulong;
+}
+
+// Using S2C_RiftStepInitiatedMsg from previous discussions to reflect travel time
+table S2C_RiftStepInitiatedMsg {
+  instigator_entity_id:ulong;
+  actual_start_position:RiftForged.Networking.Shared.Vec3;
+  calculated_target_position:RiftForged.Networking.Shared.Vec3;
+  actual_final_position:RiftForged.Networking.Shared.Vec3;   
+  travel_duration_sec:float = 1.0;                          
+  entry_effects:[RiftStepEffectPayload];          // Vector of effect data tables
+  exit_effects:[RiftStepEffectPayload];           
+  start_vfx_id:string;
+  travel_vfx_id:string;
+  end_vfx_id:string;
+}
+
+table S2C_ResourceUpdateMsg {
+  resource_type:ResourceType;
+  current_value:int;
+  max_value:uint;
+}
+
+table S2C_CombatEventMsg {
+  event_type:CombatEventType;
+  event_payload:CombatEventPayload (required);
+  server_timestamp_ms:ulong;
+}
+
+table S2C_PongMsg {
+  client_timestamp_ms:ulong;
+  server_timestamp_ms:ulong;
+}
+
+//-----------------------------------------------------------------------------
+// S2C Root Payload Union and Root Message
+//-----------------------------------------------------------------------------
+// All S2C message tables are defined above this union.
+// --- S2C Root Payload Union ---
+union S2C_UDP_Payload {
+  EntityStateUpdate:S2C_EntityStateUpdateMsg,
+  RiftStepInitiated:S2C_RiftStepInitiatedMsg, // Changed from RiftStepExecuted
+  ResourceUpdate:S2C_ResourceUpdateMsg,
+  CombatEvent:S2C_CombatEventMsg,
+  SystemBroadcast:S2C_SystemBroadcastMsg,
+  Pong:S2C_PongMsg
+}
+
+// --- S2C Root Message ---
+table Root_S2C_UDP_Message {
+  payload:S2C_UDP_Payload (required); // The root payload is essential
+}
+// Declare root_type immediately after its table definition
+root_type Root_S2C_UDP_Message;

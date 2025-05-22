@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="NetworkEngine">
+      <UniqueIdentifier>{f5d7c0ee-3176-4bd8-a32a-239c4beab0a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetworkEngine\NetworkEngine">
+      <UniqueIdentifier>{4c8ad5d9-eb7f-4ac8-a189-7465250f2965}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{0b85a623-7185-45a0-8d14-5b186495d600}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities\Logger">
+      <UniqueIdentifier>{0f2cf9ce-bbcd-4eaa-9613-4f9761cb42f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="EntryPoint">
+      <UniqueIdentifier>{429ee382-91a2-4fcc-bbd0-ea3963fee62b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Reference">
+      <UniqueIdentifier>{a138061c-7501-467d-9987-294c6aaadbe1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\NetworkEngine\Logger.cpp">
+      <Filter>Utilities\Logger</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>EntryPoint</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkEngine.cpp">
+      <Filter>NetworkEngine\NetworkEngine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\NetworkEngine\NetworkEngine2.cpp">
+      <Filter>Reference</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\NetworkEngine\Logger.h">
+      <Filter>Utilities\Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkEngine.h">
+      <Filter>NetworkEngine\NetworkEngine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\NetworkEngine\NetworkEngine2.h">
+      <Filter>Reference</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

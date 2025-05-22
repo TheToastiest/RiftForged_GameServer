@@ -1,0 +1,167 @@
+﻿// File: Schemas/riftforged_common_types.fbs
+// Protocol Version: 0.0.1
+// Description: Defines common, shared data structures and enums for RiftForged networking.
+
+namespace RiftForged.Networking.Shared;
+
+// Basic 3D Vector for positions, directions, velocities etc.
+struct Vec3 {
+  x:float;
+  y:float;
+  z:float;
+}
+
+// Quaternion for 3D orientations.
+struct Quaternion {
+  x:float;
+  y:float;
+  z:float;
+  w:float;
+}
+
+// Consolidated Damage Types reflecting class themes and gameplay mechanics.
+enum DamageType : byte {
+  Physical = 0,       // Standard physical, weapon damage, kinetic impacts, gravity/force effects.
+  Radiant = 1,        // Solar abilities (e.g., Solarii Vanguard), Fire, Light, Holy.
+  Frost = 2,          // Aegis/Glacial abilities (e.g., Glacial Order, Aegis of the North), Ice, Cold.
+  Shock = 3,          // Lightning, Electrical.
+  Necrotic = 4,       // Revenant Pact: "Necrotic Energy & Survival Mastery", life drain, soul magic.
+  Void = 5,           // Vaelith's power, Shadow (e.g., Twilight Allegiance "Entropic Strike Scaling"), Entropy, Corruption.
+  Cosmic = 6,         // Formerly Astral; for Astral Communion: "Astral Surge", celestial, dimensional power.
+  Poison = 7,         // For damage-over-time toxins.
+  Nature = 8,         // For Verdant Pact or other nature-themed classes (earth, thorns).
+  Aetherial = 9       // Pure/direct/untyped magical energy.
+}
+
+
+// Animation States - Build upon as more are needed. 
+enum AnimationState : uint { // Or byte if you don't need many
+  Idle = 0,
+  Running = 1,
+  Walking = 2, // Add a distinct walk
+  Rifting_Start = 3,
+  Rifting_Travel = 4,
+  Rifting_End = 5,
+  Attacking_Primary = 6,
+  Stunned = 7,
+  Dead = 8,
+  Frozen = 9
+  // ... other states ...
+}
+
+// Represents an instance of damage dealt.
+struct DamageInstance {
+  amount:uint;
+  type:DamageType;
+  // is_critical_hit:bool; // Example of an optional field for later
+}
+
+// Defines the intensity/type of a stun application.
+enum StunSeverity : byte {
+  Light = 0,    // Short duration, might allow certain minor actions.
+  Medium = 1,   // Standard duration, more restrictive.
+  Heavy = 2,    // Long duration, very restrictive.
+  Root = 3      // Prevents movement but might allow other actions.
+}
+
+// Describes the specifics of a stun when it's applied.
+struct StunInstance {
+  severity:StunSeverity;
+  duration_ms:uint;
+  // applying_ability_id:uint; // Optional: could be useful for client to know what caused it.
+}
+
+// Basic Item Descriptor.
+struct BasicItemDescriptor {
+  item_definition_id:uint; // Corresponds to ItemDefID convention.
+  quantity:uint;
+  // instance_id:ulong; // Optional: if referring to a unique instance of an item.
+}
+
+// Common Operation Result Codes for TCP and potentially reliable UDP responses.
+enum OperationResultCode : short {
+  Success = 0,
+  Error_Generic = -1,
+  Error_NotFound = -2,
+  Error_PermissionDenied = -3,
+  Error_InvalidParameters = -4,
+  Error_NotEnoughResources_Will = -10,    // Specific to "Will" resource[cite: 148].
+  Error_NotEnoughResources_Shimmer = -11, // Specific to "Shimmer" currency[cite: 98].
+  Error_CooldownActive = -12
+  // ... other common errors
+}
+
+// General status effect categories/identifiers.
+// Client/server would have detailed definitions for what each ID means.
+enum StatusEffectCategory : uint {
+  None = 0,
+  // Crowd Control (Debuffs)
+  Stun_Generic = 1,
+  Stun_SolarDetonation = 2,     // From Solarii Vanguard RiftStep [cite: 5]
+  Freeze_Generic = 10,          // e.g., from Glacial Order's Frosted Defense [cite: 162]
+  Root_Generic = 11,
+  Slow_Movement = 20,           // e.g., Aegis "Absolute Zero" [cite: 36]
+  Slow_AttackSpeed = 21,
+  Slow_CastSpeed = 22,
+  MovementDelay_Generic = 25,   // e.g., Astral Communion "Astral Step" [cite: 20]
+  AbilityCooldownDelay = 30,    // e.g., Revenant Pact "Curse Amplification" PvP [cite: 4]
+  // Damage Over Time (Debuffs)
+  DoT_Physical = 50, DoT_Radiant = 51, DoT_Frost = 52, DoT_Shock = 53, DoT_Necrotic = 54,
+  DoT_Void = 55,                // e.g., Twilight Allegiance "Void Cutter" [cite: 12, 13]
+  DoT_Cosmic = 56, DoT_Poison = 57, DoT_Nature = 58, DoT_Aetherial = 59,
+  // Vulnerability / Perception (Debuffs)
+  Debuff_DefenseReduction_Generic = 100,    // e.g., Revenant "Curse Amplification" PvE[cite: 4], Tenebris "Eclipse Strike"
+  Debuff_ElementalResistanceReduction = 101,
+  Debuff_AbilityEffectivenessReduction = 102, // e.g., Twilight Allegiance "Weakness Amplification" [cite: 11]
+  Debuff_HealingReduction = 103,
+  MarkedForDamage_Generic = 110,
+  Debuff_AwarenessReduced = 111,            // For Tenebris stealth effects
+  Debuff_DistractedByDecoy = 112,         // For Tenebris "Silent Passage" afterimage
+  // Offensive Buffs
+  Buff_AttackPowerIncrease = 200,       // e.g., Solarii "Solar Overdrive" [cite: 152]
+  Buff_AbilityPowerIncrease = 201,      // e.g., Solarii "Radiant Overdrive" [cite: 21, 22]
+  Buff_AttackSpeedIncrease = 202,       // e.g., Solarii "Radiant Surge"[cite: 153], Astral "Astral Surge" [cite: 16]
+  Buff_CastSpeedIncrease = 203,         // e.g., Astral "Astral Surge" [cite: 16]
+  Buff_CriticalHitChanceIncrease = 204, // e.g. Tenebris passives
+  Buff_CriticalHitDamageIncrease = 205, // e.g., Solarii "Solar Precision" [cite: 156]
+  Buff_LifestealIncrease = 206,         // e.g., Revenant Pact "Necrotic Lifesteal Scaling" [cite: 2]
+  Buff_BonusDamageProc = 207,           // e.g., Solarii "Dawnstrike Surge"[cite: 23], Astral "Celestial Strike"[cite: 17], "Stellar Charge" [cite: 19]
+  Buff_DamageReflection = 208,          // e.g., Revenant "Boundless Revenant" [cite: 8]
+  Buff_ExecuteInstantAttack = 209,      // e.g., Solarii "Photon Shift" [cite: 157]
+  Buff_AbilityDoubleCast = 210,         // e.g., Riftborn "Quantum Strike" [cite: 172]
+  // Defensive Buffs
+  Buff_DamageReduction_Generic = 300,   // e.g., Revenant "Dark Energy Adaptation"[cite: 6], Aegis "Absolute Zero"[cite: 36], Astral "Astral Phase Break" [cite: 20]
+  Buff_DamageAbsorption_Shield = 301,   // e.g., Solarii "Aurora Shield"[cite: 27], Aegis "Frozen Bastion"[cite: 31], Verdant "Lifegiving Shield" [cite: 178]
+  Buff_MaxHPArmorIncrease = 302,        // e.g. Aegis "Icebound Endurance"[cite: 32], Verdant "Health & Armor Boost" [cite: 177]
+  Buff_ElementalResistanceIncrease = 303, // e.g., Glacial "Ice Shield Trigger" [cite: 165]
+  Buff_StatusEffectResistance = 304,    // e.g., Solarii "Helios Crest" [cite: 26]
+  Buff_CCImmunity = 305,                // e.g., Glacial "Stone Skin" [cite: 163]
+  Buff_PhasingInvulnerability = 306,    // e.g., Revenant "Boundless Revenant"[cite: 8], Astral "Astral Phase Break" [cite: 20]
+  Buff_HealingIncrease = 307,           // e.g., Verdant "Shift of the Pact" [cite: 176]
+  Buff_HealOverTime_Generic = 308,      // e.g. Verdant "Lifegiving Boon" [cite: 180]
+  // Movement & Utility Buffs
+  Buff_MovementSpeedIncrease = 400,     // e.g., Tenebris "Shadow Veil", Solarii "Momentum Scaling"[cite: 157], Astral "Void Step" [cite: 18]
+  Buff_DodgeEnhancement = 401,          // e.g. Riftborn "Dodge Speed and Distance Scaling" [cite: 170]
+  Buff_Stealth = 402,                   // Base stealth for Tenebris or RiftStep variations [cite: 138]
+  Buff_MovementAcceleration = 403,      // e.g., Twilight "Phase Shift Adaptability" [cite: 14]
+  // Resource Buffs
+  Buff_EnergyCostReduction = 500,       // e.g., Solarii "Celestial Focus"[cite: 154], Verdant "Sanctuary Flow" [cite: 182]
+  Buff_EnergyRecoveryIncrease = 501,    // e.g., Solarii "Solar Resurgence" [cite: 25]
+  Buff_EnergyRefundOnCast = 502,        // e.g., Twilight "Nullbound Coordination"[cite: 15], Solarii "Helios Rejuvenation" [cite: 25]
+  Buff_PassiveHPRecoveryIncrease = 503, // e.g., Revenant Pact "Necrotic Energy Recovery" [cite: 3]
+  // Special / Mechanics Triggers
+  Effect_ChilledGround = 600,           // e.g., Glacial Order "Frosted Defense" [cite: 162]
+  Effect_CooldownReset_Movement = 601,  // e.g., Tenebris "Umbral Shift" final node
+  Effect_CooldownReset_Abilities = 602  // e.g., Riftborn "Phase Break" [cite: 171]
+}
+
+// Convention for Common Identifiers (documentation purposes within schema):
+// AccountID: ulong
+// CharacterID: ulong
+// EntityID: ulong    // Universal ID for players, NPCs, dynamic objects
+// InstanceID: uint   // For specific map/dungeon instances
+// ItemDefID: uint    // Refers to item_definition_id in BasicItemDescriptor
+// AbilityDefID: uint // Universal ID for an ability's base definition
+// FactionID: uint    // e.g., for faction control over forges
+// GuildID: ulong
+// PartyID: ulong

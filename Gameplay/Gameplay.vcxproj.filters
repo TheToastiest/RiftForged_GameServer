@@ -1,0 +1,135 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Core">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Entities">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Abilities">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Core\GameplayEngine">
+      <UniqueIdentifier>{53ee6526-b14a-45bf-b03f-75395cfc174f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\GameConstants">
+      <UniqueIdentifier>{f66d19e3-08da-481d-a41f-31e23c8b92a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\GameTypes">
+      <UniqueIdentifier>{e1f0c52b-f78c-4aa9-aeb4-a60de41ac65c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\Player">
+      <UniqueIdentifier>{33d5ddd6-3a88-4a5a-b8eb-f8df52db8cb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\Player\PlayerState">
+      <UniqueIdentifier>{bad075e8-4b61-4dda-9bb9-458a5047f096}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\Player\PlayerManager">
+      <UniqueIdentifier>{f75b87cf-b5a6-4ad7-8e3e-55864d2f731c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\NPCs">
+      <UniqueIdentifier>{363a8361-88d9-4536-bbd2-371898eca0dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\NPCs\NPCState">
+      <UniqueIdentifier>{5695cc77-03b4-4b13-a7df-94d122cb7c89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\NPCs\MonsterLogic">
+      <UniqueIdentifier>{10ad507e-2bbb-426d-9d27-529cd931067c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\Combat">
+      <UniqueIdentifier>{a722cce0-807c-4034-8b51-57d5326039c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\Combat\CombatCalculator">
+      <UniqueIdentifier>{6804ce04-01ff-40fe-bb55-eb8b08fa051a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\Combat\StatusEffectSystem">
+      <UniqueIdentifier>{e7e17a21-c778-472d-ae2e-163991f2ca1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\AbilitySystem">
+      <UniqueIdentifier>{05f4a9f5-c41f-4c19-9971-5a96f6009843}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\AbilityDefinition">
+      <UniqueIdentifier>{731eaec0-f6a4-41b8-b5eb-f214f2830f0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\RiftStepLogic">
+      <UniqueIdentifier>{28d16e68-6821-4375-956a-f505f2f51f42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\Class System Logic">
+      <UniqueIdentifier>{ca9cbdb6-fa66-47a5-bac3-57aaad99d6e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\Class System Logic\Solar Class Logic">
+      <UniqueIdentifier>{105d18f7-c893-415c-a56b-768c05c45bf9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\Class System Logic\Glacial Class Logic">
+      <UniqueIdentifier>{60a2f79c-2582-45e2-bdc7-a50a49514bd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\Class System Logic\Verdant Class Logic">
+      <UniqueIdentifier>{50c870c6-d232-4d95-9eb3-798f62edee99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\Class System Logic\Riftborn Class Logic">
+      <UniqueIdentifier>{fff89ffc-5d4f-4bab-9d93-125efabd4ce1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Skills_Passives">
+      <UniqueIdentifier>{cf7b0412-fdbe-4d21-8229-cea47c59eb10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Skills_Passives\PassiveTreeSystem">
+      <UniqueIdentifier>{ff57774a-3f8d-4d23-804b-934b9f35cd52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Skills_Passives\PassiveTreeSystem\ActiveAbilityManager">
+      <UniqueIdentifier>{10df3475-c178-43e1-af28-2a2d65a9e833}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Skills_Passives\PassiveTreeSystem\PassiveAbilityManager">
+      <UniqueIdentifier>{967e6c1a-629a-4bcd-a1e1-a4d42ad614cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="World">
+      <UniqueIdentifier>{87377351-6f13-4638-9ca8-b3505887c227}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="World\InteractionSystem">
+      <UniqueIdentifier>{6f8add27-1cb3-4e4b-b706-83b0ad5c103b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="World\ZoneLogic">
+      <UniqueIdentifier>{8d527522-b090-4258-b74b-86d578293f75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Crafting">
+      <UniqueIdentifier>{e05f38bf-2e8f-4fbd-85a8-c9c14833d58f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Crafting\CraftingSystem">
+      <UniqueIdentifier>{d2816232-22dc-42e0-98b4-45041b24d518}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Economy">
+      <UniqueIdentifier>{c57d671d-cd23-47c5-bba2-f87e160dc4e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Economy\LootSystem">
+      <UniqueIdentifier>{a842e513-6e62-4312-857e-4a3f373833ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\Player\ActivePlayer">
+      <UniqueIdentifier>{2c687c32-36e6-4a1c-91b0-1985ea58f1de}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PlayerManager.cpp">
+      <Filter>Entities\Player\PlayerManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GameplayEngine.cpp">
+      <Filter>Core\GameplayEngine</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PlayerManager.h">
+      <Filter>Entities\Player\PlayerManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ActivePlayer.h">
+      <Filter>Entities\Player\ActivePlayer</Filter>
+    </ClInclude>
+    <ClInclude Include="RiftStepLogic.h">
+      <Filter>Abilities\RiftStepLogic</Filter>
+    </ClInclude>
+    <ClInclude Include="GameplayEngine.h">
+      <Filter>Core\GameplayEngine</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
