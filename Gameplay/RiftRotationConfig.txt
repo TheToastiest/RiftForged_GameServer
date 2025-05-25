@@ -1,0 +1,226 @@
+﻿// --- RiftRotationConfig Data ---
+// Conceptual data entries for ActiveAbilityDefinition structs for the Rift Class.
+// Values are illustrative and for design/testing purposes.
+// SIDs (String IDs) would point to a localization table.
+// VFX/SFX tags would point to asset resources.
+
+//=========================================================================
+// RIFT CLASS - LEVEL 1: Unstable Strike
+// Conceptual Group ID: 3 (Assuming Solar Burst was 1, Sunscorch was 2)
+// Required Class Level: 1
+// Base Will Cost: 10 (example)
+// Base Cooldown: 2.0 seconds (example, slightly longer than Solar Burst due to secondary effect)
+// Description SID: "sid_Ability_UnstableStrike_Desc_Shared" (e.g., "Lash out with volatile rift energy that strikes a primary target and may arc to a nearby foe.")
+// Icon ID: "icon_unstable_strike"
+// Category: EAbilityCategory::Damage_Direct
+//=========================================================================
+
+ActiveAbilityDefinition {
+    ability_id: 30101, // Example unique ID sequence
+    dev_name_tag: "UnstableStrike_Sword",
+    display_name_sid: "sid_Ability_UnstableStrike_Sword_Name", // "Unstable Strike (Sword)"
+    description_sid: "sid_Ability_UnstableStrike_Sword_SpecificDesc", // "A melee strike charged with crackling rift energy that arcs to a nearby foe."
+    icon_id: "icon_unstable_strike_melee",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Single_Enemy, // Primary hit
+    cast_time_sec: 0.0f,
+    cooldown_sec: 2.0f,
+    will_cost: 10,
+    range_meters: 2.8f, // Melee ability reach
+    aoe_params: {}, // Primary hit is ST, arc is secondary
+    effects_on_primary_target: [
+        GameplayEffectInstance { 
+            damage: { amount: 12, type: RiftForged::Networking::Shared::DamageType::DamageType_Shock, is_crit: false }, // Primary Shock damage
+        }
+        // Secondary arc is handled by a special effect or logic, not necessarily another direct GameplayEffectInstance here,
+        // OR it could be a second GameplayEffectInstance with different targeting logic (e.g., "ChainToNearest").
+        // For simplicity in data, we might have a flag in ActiveAbilityDefinition:
+        // bool causes_secondary_arc = true;
+        // float secondary_arc_damage_percent = 0.40f; // 40% of primary
+        // float secondary_arc_range = 5.0f; // Range for arc from primary target
+    ],
+    // Alternatively, if the arc is also a GameplayEffectInstance:
+    // effects_on_aoe_secondary_targets: [ // This would need a target type that allows chaining
+    //    GameplayEffectInstance {
+    //        damage: { amount: 5, type: RiftForged::Networking::Shared::DamageType::DamageType_Shock, is_crit: false }, // Reduced damage for arc
+    //        // This effect needs logic to select one nearby secondary target.
+    //    }
+    // ],
+    conceptual_ability_group_id: 3,
+    weapon_context_type: Items::EItemType::WEAPON_SWORD,
+    animation_tag_caster: "Attack_UnstableStrike_Melee",
+    vfx_caster_self_tag: "VFX_Cast_Rift_Melee",
+    vfx_target_impact_tag: "VFX_Impact_UnstableStrike_Main",
+    vfx_aoe_effect_tag: "VFX_UnstableStrike_Arc", // For the visual of the arc
+    sfx_cast_tag: "SFX_Cast_Melee_Rift",
+    sfx_impact_tag: "SFX_Impact_Shock_Primary",
+    required_class_level: 1,
+    projectile_speed_mps: 0.0f
+},
+
+ActiveAbilityDefinition {
+    ability_id: 30102,
+    dev_name_tag: "UnstableStrike_Bow",
+    display_name_sid: "sid_Ability_UnstableStrike_Bow_Name", // "Unstable Strike (Bow)"
+    description_sid: "sid_Ability_UnstableStrike_Bow_SpecificDesc", // "Fires a Flux Arrow that deals Shock damage and arcs to a nearby foe."
+    icon_id: "icon_unstable_strike_bow",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Projectile_Single_Target_Enemy,
+    cast_time_sec: 0.0f,
+    cooldown_sec: 2.0f,
+    will_cost: 10,
+    range_meters: 30.0f, // Max range of projectile
+    aoe_params: {},
+    effects_on_primary_target: [ // Effects carried by the projectile and applied on impact
+        GameplayEffectInstance { 
+            damage: { amount: 12, type: RiftForged::Networking::Shared::DamageType::DamageType_Shock, is_crit: false },
+        }
+        // Secondary arc logic would trigger on projectile impact.
+    ],
+    conceptual_ability_group_id: 3,
+    weapon_context_type: Items::EItemType::WEAPON_BOW,
+    animation_tag_caster: "Attack_UnstableStrike_Bow",
+    vfx_caster_self_tag: "VFX_Cast_Rift_Ranged",
+    vfx_projectile_tag: "VFX_Projectile_FluxArrow",
+    vfx_target_impact_tag: "VFX_Impact_UnstableStrike_Main",
+    vfx_aoe_effect_tag: "VFX_UnstableStrike_ArcFromImpact", // Arc from where projectile hit
+    sfx_cast_tag: "SFX_Cast_Bow_Rift",
+    sfx_impact_tag: "SFX_Impact_Shock_Primary",
+    required_class_level: 1,
+    projectile_speed_mps: 50.0f // Example speed
+},
+
+ActiveAbilityDefinition {
+    ability_id: 30103,
+    dev_name_tag: "UnstableStrike_Staff",
+    display_name_sid: "sid_Ability_UnstableStrike_Staff_Name", // "Unstable Strike (Staff)"
+    description_sid: "sid_Ability_UnstableStrike_Staff_SpecificDesc", // "Launches an erratic bolt of rift energy that arcs on impact."
+    icon_id: "icon_unstable_strike_staff",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Projectile_Single_Target_Enemy,
+    cast_time_sec: 0.1f, // Magic implements might have slight cast times
+    cooldown_sec: 2.0f,
+    will_cost: 10,
+    range_meters: 25.0f,
+    aoe_params: {},
+    effects_on_primary_target: [ // Projectile effects
+        GameplayEffectInstance { 
+            damage: { amount: 14, type: RiftForged::Networking::Shared::DamageType::DamageType_Shock, is_crit: false }, // Staff might do slightly more base ability damage
+        }
+        // Secondary arc logic on impact
+    ],
+    conceptual_ability_group_id: 3,
+    weapon_context_type: Items::EItemType::WEAPON_STAFF,
+    animation_tag_caster: "Cast_UnstableStrike_Staff",
+    vfx_caster_self_tag: "VFX_Cast_Rift_Magic",
+    vfx_projectile_tag: "VFX_Projectile_ErraticRiftBolt",
+    vfx_target_impact_tag: "VFX_Impact_UnstableStrike_Main",
+    vfx_aoe_effect_tag: "VFX_UnstableStrike_ArcFromImpact",
+    sfx_cast_tag: "SFX_Cast_Staff_Rift",
+    sfx_impact_tag: "SFX_Impact_Shock_Primary",
+    required_class_level: 1,
+    projectile_speed_mps: 40.0f
+},
+
+//=========================================================================
+// RIFT CLASS - LEVEL 3: Rift Surge
+// Conceptual Group ID: 4
+// Required Class Level: 3
+// Base Will Cost: 25 (example)
+// Base Cooldown: 10.0 seconds (example)
+// Description SID: "sid_Ability_RiftSurge_Desc_Shared" (e.g., "Release a volatile surge of concentrated rift energy, dealing AoE Shock damage.")
+// Icon ID: "icon_rift_surge"
+// Category: EAbilityCategory::Damage_Direct
+// Target Type: Varies by weapon (PBAoE or Ground AoE)
+//=========================================================================
+
+ActiveAbilityDefinition { // Melee Variant (PBAoE)
+    ability_id: 30201,
+    dev_name_tag: "RiftSurge_Melee",
+    display_name_sid: "sid_Ability_RiftSurge_Melee_Name", // "Rift Surge (Melee)"
+    description_sid: "sid_Ability_RiftSurge_Melee_SpecificDesc", // "Slam your weapon, creating a shockwave of rift energy around you."
+    icon_id: "icon_rift_surge_melee",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Point_Blank_AoE_Self,
+    cast_time_sec: 0.2f, // Slight wind-up for a slam
+    cooldown_sec: 10.0f,
+    will_cost: 25,
+    range_meters: 0.0f, // PBAoE, range defined by AoEParams
+    aoe_params: { radius_meters: 5.0f, max_targets: 5 }, // Example: 5m radius, hits up to 5 targets
+    effects_on_aoe_secondary_targets: [ // Or effects_on_primary_target if PBAoE hits all in radius as "primary"
+        GameplayEffectInstance { 
+            damage: { amount: 25, type: RiftForged::Networking::Shared::DamageType::DamageType_Shock, is_crit: false },
+        }
+    ],
+    conceptual_ability_group_id: 4,
+    weapon_context_type: Items::EItemType::WEAPON_SWORD, // Could also be _AXE, _MAUL with same/similar definition
+    animation_tag_caster: "Attack_RiftSurge_MeleeSlam",
+    vfx_caster_self_tag: "VFX_Cast_Rift_MeleeAoE",
+    vfx_aoe_effect_tag: "VFX_AoE_RiftSurge_Shockwave",
+    sfx_cast_tag: "SFX_Cast_Melee_RiftSurge",
+    required_class_level: 3
+},
+
+ActiveAbilityDefinition { // Bow/Gun Variant (Projectile that creates Ground AoE on impact)
+    ability_id: 30202,
+    dev_name_tag: "RiftSurge_Bow",
+    display_name_sid: "sid_Ability_RiftSurge_Bow_Name", // "Rift Surge (Bow)"
+    description_sid: "sid_Ability_RiftSurge_Bow_SpecificDesc", // "Fire a Resonance Arrow that detonates into an AoE Shock burst."
+    icon_id: "icon_rift_surge_bow",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Projectile_Ground_AoE, // Projectile creates AoE on impact
+    cast_time_sec: 0.0f,
+    cooldown_sec: 10.0f,
+    will_cost: 25,
+    range_meters: 30.0f, // Max range of the projectile
+    aoe_params: { radius_meters: 4.0f, max_targets: 5 }, // AoE effect at projectile's impact
+    effects_at_target_location: [ // Effects of the AoE created by the projectile
+        GameplayEffectInstance { 
+            damage: { amount: 25, type: RiftForged::Networking::Shared::DamageType::DamageType_Shock, is_crit: false },
+        }
+    ],
+    conceptual_ability_group_id: 4,
+    weapon_context_type: Items::EItemType::WEAPON_BOW, // Or _GUN
+    animation_tag_caster: "Attack_RiftSurge_Bow",
+    vfx_caster_self_tag: "VFX_Cast_Rift_RangedAoE",
+    vfx_projectile_tag: "VFX_Projectile_ResonanceArrow",
+    vfx_target_impact_tag: "VFX_Impact_RiftSurge_Explosion", // This is the AoE visual itself
+    vfx_aoe_effect_tag: "VFX_Impact_RiftSurge_Explosion", // Re-using for clarity
+    sfx_cast_tag: "SFX_Cast_Bow_RiftSurge",
+    sfx_impact_tag: "SFX_Explosion_Shock",
+    required_class_level: 3,
+    projectile_speed_mps: 45.0f
+},
+
+ActiveAbilityDefinition { // Staff/Wand Variant (Targeted Ground AoE or PBAoE)
+    ability_id: 30203,
+    dev_name_tag: "RiftSurge_Staff",
+    display_name_sid: "sid_Ability_RiftSurge_Staff_Name", // "Rift Surge (Staff)"
+    description_sid: "sid_Ability_RiftSurge_Staff_SpecificDesc", // "Call down a localized lightning strike or unleash a nova of rift energy."
+    icon_id: "icon_rift_surge_staff",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Ground_Targeted_AoE, // Or Point_Blank_AoE_Self for a nova version
+    cast_time_sec: 0.5f, // Slight cast time for a targeted AoE
+    cooldown_sec: 10.0f,
+    will_cost: 25,
+    range_meters: 20.0f, // Max range to target the AoE center
+    aoe_params: { radius_meters: 4.0f, max_targets: 5 },
+    effects_at_target_location: [
+        GameplayEffectInstance { 
+            damage: { amount: 30, type: RiftForged::Networking::Shared::DamageType::DamageType_Shock, is_crit: false }, // Staff version might be slightly stronger direct damage
+        }
+    ],
+    conceptual_ability_group_id: 4,
+    weapon_context_type: Items::EItemType::WEAPON_STAFF, // Or _WAND
+    animation_tag_caster: "Cast_RiftSurge_Staff",
+    vfx_caster_self_tag: "VFX_Cast_Rift_MagicAoE",
+    vfx_aoe_effect_tag: "VFX_AoE_RiftSurge_LightningStrike", // Or Nova
+    sfx_cast_tag: "SFX_Cast_Staff_RiftSurge",
+    sfx_impact_tag: "SFX_Impact_LightningStrike",
+    required_class_level: 3
+}
+
+// TODO: Add conceptual data for:
+// Rift Level 5: Rift Jolt (Chaining/Arcing Shock) - Melee, Bow, Staff variants
+// Rift Level 7: Nucleic Storm (Ground AoE DoT/Debuff) - Melee, Bow, Staff casting variants
+// Rift Level 9: Rift Overload (Self Buff) - Weapon-agnostic effect, one definition likely covers all.

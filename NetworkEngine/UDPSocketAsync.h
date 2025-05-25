@@ -1,4 +1,9 @@
-﻿#pragma once
+﻿// Description: Header file for the UDPSocketAsync class, which handles asynchronous UDP socket operations using IOCP.
+// This file includes necessary headers, defines constants, and declares the UDPSocketAsync class and its methods.
+// Copyright (C) 2023 RiftForged
+
+
+#pragma once
 
 #include <string>
 #include <vector>
@@ -83,6 +88,8 @@ namespace RiftForged {
             bool Start();
             void Stop();
             bool SendTo(const NetworkEndpoint& recipient, const char* data, int length);
+
+            bool IsRunning() const;
 
         private:
             void WorkerThread();

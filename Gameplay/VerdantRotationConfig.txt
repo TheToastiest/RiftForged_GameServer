@@ -1,0 +1,101 @@
+﻿// --- VerdantRotationConfig Data ---
+// Conceptual data entries for ActiveAbilityDefinition structs for the Verdant Class.
+// Values are illustrative and for design/testing purposes.
+// Damage Type: Nature
+
+//=========================================================================
+// VERDANT CLASS - LEVEL 1: Briar Lash
+// Conceptual Group ID: 7 (Continuing unique group IDs)
+// Required Class Level: 1
+// Base Will Cost: 8 (example)
+// Base Cooldown: 1.8 seconds (example)
+// Description SID: "sid_Ability_BriarLash_Desc_Shared" (e.g., "Summon a thorny briar from the earth to strike your target.")
+// Icon ID: "icon_briar_lash"
+// Category: EAbilityCategory::Damage_Direct
+//=========================================================================
+
+ActiveAbilityDefinition {
+    ability_id: 70101, // Single definition, as effect is ground-targeted, weapon varies casting anim
+    dev_name_tag: "BriarLash",
+    display_name_sid: "sid_Ability_BriarLash_Name",
+    description_sid: "sid_Ability_BriarLash_Desc", // "Summon a thorny briar from the earth..."
+    icon_id: "icon_briar_lash",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Single_Enemy, // Target an enemy, effect appears under them
+    cast_time_sec: 0.1f, // Quick cast
+    cooldown_sec: 1.8f,
+    will_cost: 8,
+    range_meters: 20.0f, // Range to target the enemy for the ground eruption
+    aoe_params: {}, // Effect itself is single target lash
+    effects_on_primary_target: [ // The lash hits the targeted enemy
+        GameplayEffectInstance { 
+            damage: { amount: 14, type: RiftForged::Networking::Shared::DamageType::DamageType_Nature, is_crit: false },
+        }
+        // Removed the minor slow for L1 balance as per user feedback
+    ],
+    conceptual_ability_group_id: 7,
+    // weapon_context_type: Items::EItemType::NONE; // Effect delivery is ground-based, weapon just influences cast animation
+    animation_tag_caster: "Cast_BriarLash_Melee", // Base, _Bow, _Staff variants for anim
+    vfx_target_impact_tag: "VFX_Impact_BriarLash", // Lash erupting from ground
+    vfx_aoe_effect_tag: "VFX_GroundEruption_Briar", // Initial ground disturbance
+    sfx_cast_tag: "SFX_Cast_Nature_Ground",
+    sfx_impact_tag: "SFX_Impact_ThornLash",
+    required_class_level: 1
+},
+
+//=========================================================================
+// VERDANT CLASS - LEVEL 3: Embrace of the Grove
+// Conceptual Group ID: 8
+// Required Class Level: 3
+// Base Will Cost: 25 (example)
+// Base Cooldown: 25.0 seconds (example)
+// Description SID: "sid_Ability_EmbraceOfTheGrove_Desc_Shared" (e.g., "Shield yourself and nearby allies with protective nature energy.")
+// Icon ID: "icon_embrace_of_the_grove"
+// Category: EAbilityCategory::Shield_AoE_Ally (and self)
+//=========================================================================
+
+ActiveAbilityDefinition {
+    ability_id: 80101, // Single definition, effect is PBAoE, weapon varies casting anim
+    dev_name_tag: "EmbraceOfTheGrove",
+    display_name_sid: "sid_Ability_EmbraceOfTheGrove_Name",
+    description_sid: "sid_Ability_EmbraceOfTheGrove_Desc", // "Call upon the grove to shield you and nearby allies..."
+    icon_id: "icon_embrace_of_the_grove",
+    category: EAbilityCategory::Shield_AoE_Ally,
+    target_type: EAbilityTargetType::Point_Blank_AoE_Self, // Affects self and allies in radius
+    cast_time_sec: 0.5f, // Short cast for an AoE shield
+    cooldown_sec: 25.0f,
+    will_cost: 25,
+    range_meters: 0.0f, // PBAoE, radius in aoe_params
+    aoe_params: { radius_meters: 8.0f, max_targets: 5 }, // Example: 8m radius, affects up to 5 allies + self
+    // The shield effect itself: Grants a shield equal to 7.5% of EACH TARGET'S max health.
+    // This needs a special GameplayEffectInstance payload or logic.
+    // Using ApplyBuffDebuffData with a specific StatusEffectCategory for "ApplyPercentageMaxHealthShield".
+    effects_on_aoe_secondary_targets: [ // This would apply to self and allies in the AoE
+        GameplayEffectInstance {
+            effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData, 
+            // Assuming a StatusEffectCategory that means "Gain shield = 7.5% of your Max HP for 6s"
+            buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_Buff_DamageAbsorption_Shield, // This category would need to be understood by the effect system to apply a %maxHP shield
+            duration_ms: 6000 // Shield duration
+            // The 7.5% magnitude would be part of the StatusEffectCategory_Buff_DamageAbsorption_Shield definition or passed if effect supports magnitude.
+        }
+    ],
+    effects_on_caster_self: [ // Also applies to caster
+         GameplayEffectInstance {
+            effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData, 
+            buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_Buff_DamageAbsorption_Shield,
+            duration_ms: 6000
+        }
+    ],
+    conceptual_ability_group_id: 8,
+    // weapon_context_type: Items::EItemType::NONE; // Effect is weapon-agnostic
+    animation_tag_caster: "Cast_EmbraceOfTheGrove_Melee", // Base, _Bow, _Staff variants for anim
+    vfx_caster_self_tag: "VFX_Cast_EmbraceOfTheGrove",
+    vfx_aoe_effect_tag: "VFX_AoE_GroveShield_Pulse",
+    sfx_cast_tag: "SFX_Cast_Nature_ShieldAoE",
+    required_class_level: 3
+}
+
+// TODO: Add conceptual data for:
+// Verdant Level 5: Verdant Bolt (ST Nature projectile)
+// Verdant Level 7: Vitality Current (PBAoE Heal allies/Damage enemies)
+// Verdant Level 9: Heart of the Wildwood (Self Buff: +Healing, +Nature Dmg, Nature-Imbued Basic Attacks)

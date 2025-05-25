@@ -1,19 +1,24 @@
-﻿#pragma once
+﻿// File: PacketProcessor.h (Updated)
+#pragma once
 
-#include <cstdint>  // For uint8_t etc.
-#include <optional>   // For std::optional
+#include <cstdint>    // For uint8_t etc.
+#include <optional>     // For std::optional
 
-// Assuming NetworkCommon.h is in a path findable like this
-// (e.g., if PacketManagement and Networking are sibling directories)
-// Adjust relative path as needed for your actual structure.
-#include "NetworkCommon.h" // For S2C_Response, NetworkEndpoint
-#include "GamePacketHeader.h"     // For GamePacketHeader
+#include "NetworkCommon.h"    // For S2C_Response, NetworkEndpoint
+#include "GamePacketHeader.h" // For GamePacketHeader
 
-// Forward declaration for MessageDispatcher
+// Forward declarations
 namespace RiftForged {
     namespace Networking {
-        class MessageDispatcher; // Defined in Dispatch/MessageDispatcher.h
+        class MessageDispatcher; //
     }
+    namespace Gameplay {         // <<< ADDED this forward declaration
+        class GameplayEngine;    // Forward declare GameplayEngine
+    }
+    // Optional: If ProcessIncomingRawPacket or other methods in this header were to take ActivePlayer*
+    // namespace GameLogic {
+    //     class ActivePlayer;
+    // }
 }
 
 namespace RiftForged {
@@ -21,21 +26,24 @@ namespace RiftForged {
 
         class PacketProcessor {
         public:
-            // Constructor takes a reference to the MessageDispatcher
-            PacketProcessor(MessageDispatcher& dispatcher);
+            // <<< MODIFIED Constructor: Now also takes a GameplayEngine reference >>>
+            PacketProcessor(MessageDispatcher& dispatcher,
+                RiftForged::Gameplay::GameplayEngine& gameplayEngine); //
 
             // This is the main entry point for processing a raw packet.
-            // It now returns an optional S2C_Response.
-            std::optional<RiftForged::Networking::S2C_Response> ProcessIncomingRawPacket(
+            // It returns an optional S2C_Response.
+            std::optional<RiftForged::Networking::S2C_Response> ProcessIncomingRawPacket( //
                 const char* raw_buffer,
                 int raw_length,
                 const NetworkEndpoint& sender_endpoint
             );
 
         private:
-            MessageDispatcher& m_messageDispatcher;
+            MessageDispatcher& m_messageDispatcher; //
+            RiftForged::Gameplay::GameplayEngine& m_gameplayEngine; // <<< ADDED GameplayEngine reference member
+
             // Potentially a reference to your ReliabilityManager if ACK processing happens here:
-            // ReliabilityManager& m_reliabilityManager; 
+            // ReliabilityManager& m_reliabilityManager; //
         };
 
     } // namespace Networking

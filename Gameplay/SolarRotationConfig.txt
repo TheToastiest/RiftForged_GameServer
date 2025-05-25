@@ -1,0 +1,239 @@
+﻿// --- SolarRotationConfig Data ---
+// Conceptual data entries for ActiveAbilityDefinition structs.
+// Values are illustrative and for design/testing purposes.
+// SIDs (String IDs) would point to a localization table.
+// VFX/SFX tags would point to asset resources.
+
+//=========================================================================
+// SOLAR CLASS - LEVEL 1: Solar Burst
+// Conceptual Group ID: 1
+// Required Class Level: 1
+// Base Will Cost: 10 (example)
+// Base Cooldown: 1.5 seconds
+// Description SID: "sid_Ability_SolarBurst_Desc_Shared" (e.g., "Unleash a quick burst of solar energy through your weapon.")
+// Icon ID: "icon_solar_burst"
+// Category: EAbilityCategory::Damage_Direct
+//=========================================================================
+
+ActiveAbilityDefinition {
+    ability_id: 10101,
+    dev_name_tag: "SolarBurst_Sword",
+    display_name_sid: "sid_Ability_SolarBurst_Sword_Name", // "Solar Burst (Sword)"
+    description_sid: "sid_Ability_SolarBurst_Sword_SpecificDesc", // "A swift, solar-infused melee strike..."
+    icon_id: "icon_solar_burst_sword", // Or use generic icon_solar_burst
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Single_Enemy,
+    cast_time_sec: 0.0f,
+    cooldown_sec: 1.5f,
+    will_cost: 10,
+    range_meters: 2.5f, // Melee weapon's effective ability reach
+    aoe_params: {}, // No AoE
+    effects_on_primary_target: [
+        GameplayEffectInstance { 
+            // This assumes GameplayEffectInstance can represent direct damage without an S2C payload type here,
+            // or uses a generic "DirectDamage" payload if one exists.
+            // For simplicity, focusing on the core damage data.
+            damage: { amount: 8, type: RiftForged::Networking::Shared::DamageType::DamageType_Physical, is_crit: false },
+        },
+        GameplayEffectInstance {
+            damage: { amount: 15, type: RiftForged::Networking::Shared::DamageType::DamageType_Radiant, is_crit: false },
+        }
+    ],
+    effects_on_caster_self: {},
+    effects_at_target_location: {},
+    conceptual_ability_group_id: 1,
+    weapon_context_type: Items::EItemType::WEAPON_SWORD, // Assuming EItemType is in Items namespace
+    animation_tag_caster: "Attack_SolarBurst_Sword",
+    vfx_caster_self_tag: "VFX_Cast_SolarBurst_Melee",
+    vfx_projectile_tag: "", // Not a projectile
+    vfx_target_impact_tag: "VFX_Impact_SolarBurst_Melee",
+    vfx_aoe_effect_tag: "",
+    sfx_cast_tag: "SFX_Cast_Melee_Solar",
+    sfx_projectile_travel_tag: "",
+    sfx_impact_tag: "SFX_Impact_SolarBurst_Melee",
+    required_class_level: 1,
+    requires_line_of_sight: true,
+    can_be_cast_while_moving: true,
+    projectile_speed_mps: 0.0f
+},
+
+ActiveAbilityDefinition {
+    ability_id: 10102,
+    dev_name_tag: "SolarBurst_Bow",
+    display_name_sid: "sid_Ability_SolarBurst_Bow_Name", // "Solar Burst (Bow)"
+    description_sid: "sid_Ability_SolarBurst_Bow_SpecificDesc", // "Fires a solar-enhanced arrow..."
+    icon_id: "icon_solar_burst_bow",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Projectile_Single_Target_Enemy,
+    cast_time_sec: 0.0f,
+    cooldown_sec: 1.5f,
+    will_cost: 10,
+    range_meters: 30.0f, // Max range of the projectile
+    aoe_params: {},
+    effects_on_primary_target: [ // These are the effects the projectile carries
+        GameplayEffectInstance {
+            damage: { amount: 8, type: RiftForged::Networking::Shared::DamageType::DamageType_Physical, is_crit: false },
+        },
+        GameplayEffectInstance {
+            damage: { amount: 15, type: RiftForged::Networking::Shared::DamageType::DamageType_Radiant, is_crit: false },
+        }
+    ],
+    conceptual_ability_group_id: 1,
+    weapon_context_type: Items::EItemType::WEAPON_BOW,
+    animation_tag_caster: "Attack_SolarBurst_Bow",
+    vfx_caster_self_tag: "VFX_Cast_SolarBurst_Ranged",
+    vfx_projectile_tag: "VFX_Projectile_SolarArrow",
+    vfx_target_impact_tag: "VFX_Impact_SolarBurst_Arrow",
+    sfx_cast_tag: "SFX_Cast_Bow_Solar",
+    sfx_impact_tag: "SFX_Impact_SolarBurst",
+    required_class_level: 1,
+    requires_line_of_sight: true, // For initial target lock/aim
+    can_be_cast_while_moving: true, // Can typically fire bows while moving
+    projectile_speed_mps: 50.0f
+},
+
+ActiveAbilityDefinition {
+    ability_id: 10103,
+    dev_name_tag: "SolarBurst_Staff",
+    display_name_sid: "sid_Ability_SolarBurst_Staff_Name", // "Solar Burst (Staff)"
+    description_sid: "sid_Ability_SolarBurst_Staff_SpecificDesc", // "Launches an imbued fire bolt..."
+    icon_id: "icon_solar_burst_staff",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Projectile_Single_Target_Enemy,
+    cast_time_sec: 0.0f, // Or a very short cast for staves
+    cooldown_sec: 1.5f,
+    will_cost: 10,
+    range_meters: 25.0f,
+    aoe_params: {},
+    effects_on_primary_target: [ // Projectile effects
+        GameplayEffectInstance {
+            damage: { amount: 5, type: RiftForged::Networking::Shared::DamageType::DamageType_Physical, is_crit: false }, // Less physical from magic implements
+        },
+        GameplayEffectInstance {
+            damage: { amount: 18, type: RiftForged::Networking::Shared::DamageType::DamageType_Radiant, is_crit: false }, // More Radiant
+        }
+    ],
+    conceptual_ability_group_id: 1,
+    weapon_context_type: Items::EItemType::WEAPON_STAFF,
+    animation_tag_caster: "Cast_SolarBurst_Staff",
+    vfx_caster_self_tag: "VFX_Cast_Solar_Magic",
+    vfx_projectile_tag: "VFX_Projectile_SolarFirebolt",
+    vfx_target_impact_tag: "VFX_Impact_SolarBurst_Magic",
+    sfx_cast_tag: "SFX_Cast_Staff_Solar",
+    sfx_impact_tag: "SFX_Impact_SolarBurst",
+    required_class_level: 1,
+    can_be_cast_while_moving: false, // Example: Staves might require brief root for casting this
+    projectile_speed_mps: 40.0f
+},
+
+//=========================================================================
+// SOLAR CLASS - LEVEL 3: Sunscorch
+// Conceptual Group ID: 2
+// Required Class Level: 3
+// Base Will Cost: 15 (example)
+// Base Cooldown: 10.0 seconds (example)
+// Description SID: "sid_Ability_Sunscorch_Desc_Shared" (e.g., "Brand a target with solar energy, dealing Radiant damage over time.")
+// Icon ID: "icon_sunscorch"
+// Category: EAbilityCategory::Damage_DoT
+//=========================================================================
+
+ActiveAbilityDefinition {
+    ability_id: 10201,
+    dev_name_tag: "Sunscorch_Sword",
+    display_name_sid: "sid_Ability_Sunscorch_Sword_Name", // "Sunscorch (Sword)"
+    description_sid: "sid_Ability_Sunscorch_Sword_SpecificDesc", // "A searing strike that leaves the target smoldering..."
+    icon_id: "icon_sunscorch_sword",
+    category: EAbilityCategory::Damage_DoT,
+    target_type: EAbilityTargetType::Single_Enemy,
+    cast_time_sec: 0.0f,
+    cooldown_sec: 10.0f,
+    will_cost: 15,
+    range_meters: 2.5f, // Melee
+    aoe_params: {},
+    effects_on_primary_target: [
+        GameplayEffectInstance { // Initial hit damage
+            damage: { amount: 8, type: RiftForged::Networking::Shared::DamageType::DamageType_Radiant, is_crit: false },
+        },
+        GameplayEffectInstance { // The DoT itself (applied as a status effect)
+            effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData, // Using this for applying status effects
+            buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_DoT_Radiant, // This category defines tick damage, interval, base duration
+            duration_ms: 6000 // Ability can specify/override duration
+            // The actual DoT damage per tick is defined by the StatusEffectCategory_DoT_Radiant itself
+        }
+    ],
+    conceptual_ability_group_id: 2,
+    weapon_context_type: Items::EItemType::WEAPON_SWORD,
+    animation_tag_caster: "Attack_Sunscorch_Sword",
+    vfx_target_impact_tag: "VFX_Impact_Sunscorch_Melee",
+    sfx_cast_tag: "SFX_Cast_Melee_Sunscorch",
+    required_class_level: 3
+},
+
+ActiveAbilityDefinition {
+    ability_id: 10202,
+    dev_name_tag: "Sunscorch_Bow",
+    display_name_sid: "sid_Ability_Sunscorch_Bow_Name", // "Sunscorch (Bow)"
+    description_sid: "sid_Ability_Sunscorch_Bow_SpecificDesc", // "Fires an ember arrow that applies a burn..."
+    icon_id: "icon_sunscorch_bow",
+    category: EAbilityCategory::Damage_DoT,
+    target_type: EAbilityTargetType::Projectile_Single_Target_Enemy,
+    cast_time_sec: 0.0f,
+    cooldown_sec: 10.0f,
+    will_cost: 15,
+    range_meters: 30.0f,
+    aoe_params: {},
+    effects_on_primary_target: [ // Effects applied by the projectile on hit
+        // Optional: Minor initial impact damage from the arrow itself
+        // GameplayEffectInstance { damage: { amount: 5, type: RiftForged::Networking::Shared::DamageType::DamageType_Physical, is_crit: false } },
+        GameplayEffectInstance { // The DoT
+            effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData,
+            buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_DoT_Radiant,
+            duration_ms: 6000
+        }
+    ],
+    conceptual_ability_group_id: 2,
+    weapon_context_type: Items::EItemType::WEAPON_BOW,
+    animation_tag_caster: "Attack_Sunscorch_Bow",
+    vfx_projectile_tag: "VFX_Projectile_EmberArrow",
+    vfx_target_impact_tag: "VFX_Impact_Sunscorch_Arrow",
+    sfx_cast_tag: "SFX_Cast_Bow_Sunscorch",
+    required_class_level: 3,
+    projectile_speed_mps: 50.0f
+},
+
+ActiveAbilityDefinition {
+    ability_id: 10203,
+    dev_name_tag: "Sunscorch_Staff",
+    // ... similar to Sunscorch_Bow, adjust VFX, projectile speed etc. for Staff ...
+    // display_name_sid: "sid_Ability_Sunscorch_Staff_Name",
+    // description_sid: "sid_Ability_Sunscorch_Staff_SpecificDesc", 
+    // icon_id: "icon_sunscorch_staff",
+    // category: EAbilityCategory::Damage_DoT,
+    // target_type: EAbilityTargetType::Projectile_Single_Target_Enemy,
+    // cast_time_sec: 0.1f, // Staves might have a tiny cast time
+    // cooldown_sec: 10.0f,
+    // will_cost: 15,
+    // range_meters: 25.0f,
+    // effects_on_primary_target: [ 
+    //     GameplayEffectInstance { 
+    //         effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData,
+    //         buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_DoT_Radiant,
+    //         duration_ms: 6000 
+    //     }
+    // ],
+    // conceptual_ability_group_id: 2,
+    // weapon_context_type: Items::EItemType::WEAPON_STAFF,
+    // animation_tag_caster: "Cast_Sunscorch_Staff",
+    // vfx_projectile_tag: "VFX_Projectile_StickySolarFlare",
+    // vfx_target_impact_tag: "VFX_Impact_Sunscorch_Magic",
+    // sfx_cast_tag: "SFX_Cast_Staff_Sunscorch",
+    // required_class_level: 3,
+    // projectile_speed_mps: 40.0f
+}
+
+// TODO: Add conceptual data for:
+// Solar Level 5: Solar Flare (AoE Burst) - Sword, Bow, Staff variants
+// Solar Level 7: Helios Lance (Precision Nuke) - Sword, Bow, Staff variants
+// Solar Level 9: Inner Radiance (Self Buff) - Mostly weapon-agnostic effect, so one definition might cover all weapon contexts for the buff itself.
+
+// Then repeat for Rift, Verdant, and Glacial classes for their first 2 abilities each.

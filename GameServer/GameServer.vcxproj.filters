@@ -17,8 +17,5 @@
     <ClCompile Include="GameServerEngine.cpp">
       <Filter>GameServerEngine</Filter>
     </ClCompile>
-    <ClCompile Include="Main.cpp">
-      <Filter>EntryPoint</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

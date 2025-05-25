@@ -1,6 +1,8 @@
 ﻿// File: Schemas/riftforged_s2c_udp_messages.fbs
-// Protocol Version: 0.0.1
+// Protocol Version: 0.0.3
 // Description: Defines Server-to-Client messages for real-time UDP communication.
+// This file is part of Riftforged.
+// Copyright (C) 2023 Riftforged 
 
 include "riftforged_common_types.fbs"; 
 
@@ -12,8 +14,15 @@ namespace RiftForged.Networking.UDP.S2C;
 enum ResourceType : byte { Will = 0, Health = 1, Shimmer_Notification = 2 }
 
 enum CombatEventType : byte {
-  DamageDealt = 0, HealReceived = 1, Miss = 2, Dodge = 3, Block = 4, 
-  Parry = 5, CriticalHit = 6, AbilityInterrupt = 7
+  None = 0,
+  DamageDealt = 1, 
+  HealReceived = 2, 
+  Miss = 3,
+  Dodge = 4,
+  Block = 5, 
+  Parry = 6, 
+  CriticalHit = 7, 
+  AbilityInterrupt = 8
 }
 
 //-----------------------------------------------------------------------------
@@ -52,11 +61,30 @@ table Effect_PersistentAreaData {
 //-----------------------------------------------------------------------------
 // S2C Combat Event Detail Table Definitions (for CombatEventPayload)
 //-----------------------------------------------------------------------------
+// Existing table, add/confirm is_basic_attack
 table CombatEvent_DamageDealtDetails {
-  source_entity_id:ulong;
-  target_entity_id:ulong;
-  damage_info:RiftForged.Networking.Shared.DamageInstance;
+  source_entity_id:ulong;     // Who dealt the damage
+  target_entity_id:ulong;     // Who received the damage
+  damage_info:RiftForged.Networking.Shared.DamageInstance (required); // Includes amount, type, and is_crit
   is_kill:bool = false;
+  is_basic_attack:bool = false; // << ADD/CONFIRM THIS
+  // weapon_type_id_used:uint; // Optional: if client needs to know which weapon for VFX/SFX
+}
+
+// NEW: For spawning visible projectiles (basic attacks or abilities)
+table S2C_SpawnProjectileMsg {
+  projectile_id:ulong (key);    // Unique ID for this projectile instance, assigned by server
+  owner_entity_id:ulong;        // Player or NPC ID that fired it
+  // weapon_type_id_source:uint;   // Optional: Base ID of weapon/ability that generated it (for client VFX/SFX lookup)
+                                // Alternatively, vfx_tag can cover this.
+  start_position:Shared.Vec3 (required);
+  initial_direction:Shared.Vec3 (required); // Normalized world-space vector
+  speed:float;                    // Units per second
+  max_range:float;                // How far it will travel before expiring if it hits nothing
+  projectile_vfx_tag:string;      // Tag for client to look up visuals (e.g., "ArrowBasic", "FireboltBasic")
+  // hit_effect_vfx_tag:string;   // VFX for when this specific projectile hits
+  // size_radius:float;           // For collision detection if it's not a point
+  // can_pierce:bool = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -140,6 +168,7 @@ union S2C_UDP_Payload {
   RiftStepInitiated:S2C_RiftStepInitiatedMsg, 
   ResourceUpdate:S2C_ResourceUpdateMsg,
   CombatEvent:S2C_CombatEventMsg,
+  SpawnProjectile:S2C_SpawnProjectileMsg,
   SystemBroadcast:S2C_SystemBroadcastMsg,
   Pong:S2C_PongMsg
 }

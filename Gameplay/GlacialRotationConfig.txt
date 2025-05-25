@@ -1,0 +1,165 @@
+﻿// --- GlacialRotationConfig Data ---
+// Conceptual data entries for ActiveAbilityDefinition structs for the Glacial Class.
+// Values are illustrative and for design/testing purposes.
+// Damage Type: Frost
+
+//=========================================================================
+// GLACIAL CLASS - LEVEL 1: Arctic Laceration
+// Conceptual Group ID: 5 (Assuming Solar/Rift took 1-4)
+// Required Class Level: 1
+// Base Will Cost: 10 (example)
+// Base Cooldown: 2.0 seconds (example)
+// Description SID: "sid_Ability_ArcticLaceration_Desc_Shared" (e.g., "Strike or project a shard of frigid ice, dealing Frost damage and briefly numbing foes.")
+// Icon ID: "icon_arctic_laceration"
+// Category: EAbilityCategory::Damage_Direct (with minor Control_SoftCC via Chill)
+//=========================================================================
+
+ActiveAbilityDefinition {
+    ability_id: 50101, // Example unique ID sequence
+    dev_name_tag: "ArcticLaceration_Sword",
+    display_name_sid: "sid_Ability_ArcticLaceration_Sword_Name", // "Arctic Laceration (Sword)"
+    description_sid: "sid_Ability_ArcticLaceration_Sword_SpecificDesc", // "A melee strike imbued with jagged ice..."
+    icon_id: "icon_arctic_laceration_melee",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Single_Enemy,
+    cast_time_sec: 0.0f,
+    cooldown_sec: 2.0f,
+    will_cost: 10,
+    range_meters: 2.5f, // Melee ability reach
+    aoe_params: {},
+    effects_on_primary_target: [
+        GameplayEffectInstance { // Physical part of the weapon hit
+            damage: { amount: 7, type: RiftForged::Networking::Shared::DamageType::DamageType_Physical, is_crit: false },
+        },
+        GameplayEffectInstance { // Added Frost damage
+            damage: { amount: 10, type: RiftForged::Networking::Shared::DamageType::DamageType_Frost, is_crit: false },
+        },
+        GameplayEffectInstance { // Chill effect
+            effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData,
+            buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_Slow_Movement, // Assuming a general "Chill" maps to Slow_Movement
+            // We'd need a way to define magnitude for StatusEffectCategory, or have specific "Chill_10_Percent_1s" categories
+            duration_ms: 1500 // 1.5 second Chill
+            // This effect instance might need a magnitude field if StatusEffectCategory_Slow_Movement is generic.
+        }
+    ],
+    conceptual_ability_group_id: 5,
+    weapon_context_type: Items::EItemType::WEAPON_SWORD,
+    animation_tag_caster: "Attack_ArcticLaceration_Melee",
+    vfx_target_impact_tag: "VFX_Impact_ArcticLaceration_Melee",
+    sfx_cast_tag: "SFX_Cast_Melee_Frost",
+    sfx_impact_tag: "SFX_Impact_IceShard",
+    required_class_level: 1
+},
+
+ActiveAbilityDefinition { // Bow Variant
+    ability_id: 50102,
+    dev_name_tag: "ArcticLaceration_Bow",
+    display_name_sid: "sid_Ability_ArcticLaceration_Bow_Name",
+    description_sid: "sid_Ability_ArcticLaceration_Bow_SpecificDesc", // "Fires an Arctic Shard arrow..."
+    icon_id: "icon_arctic_laceration_bow",
+    category: EAbilityCategory::Damage_Direct,
+    target_type: EAbilityTargetType::Projectile_Single_Target_Enemy,
+    cast_time_sec: 0.0f,
+    cooldown_sec: 2.0f,
+    will_cost: 10,
+    range_meters: 30.0f,
+    effects_on_primary_target: [ // Applied by projectile
+        GameplayEffectInstance { // Direct Frost damage from the shard itself
+            damage: { amount: 12, type: RiftForged::Networking::Shared::DamageType::DamageType_Frost, is_crit: false },
+        },
+        GameplayEffectInstance { // Chill effect
+            effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData,
+            buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_Slow_Movement,
+            duration_ms: 1500
+        }
+    ],
+    conceptual_ability_group_id: 5,
+    weapon_context_type: Items::EItemType::WEAPON_BOW,
+    animation_tag_caster: "Attack_ArcticLaceration_Bow",
+    vfx_projectile_tag: "VFX_Projectile_ArcticShardArrow",
+    vfx_target_impact_tag: "VFX_Impact_IceShard",
+    sfx_cast_tag: "SFX_Cast_Bow_Frost",
+    sfx_impact_tag: "SFX_Impact_IceShard",
+    required_class_level: 1,
+    projectile_speed_mps: 50.0f
+},
+
+ActiveAbilityDefinition { // Staff Variant
+    ability_id: 50103,
+    dev_name_tag: "ArcticLaceration_Staff",
+    display_name_sid: "sid_Ability_ArcticLaceration_Staff_Name",
+    description_sid: "sid_Ability_ArcticLaceration_Staff_SpecificDesc", // "Launches a quick shard of magical ice..."
+    icon_id: "icon_arctic_laceration_staff",
+    // ... other fields similar to Bow variant, adjust damage/range/VFX ...
+    range_meters: 25.0f,
+    effects_on_primary_target: [
+        GameplayEffectInstance { 
+            damage: { amount: 14, type: RiftForged::Networking::Shared::DamageType::DamageType_Frost, is_crit: false },
+        },
+        GameplayEffectInstance { 
+            effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData,
+            buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_Slow_Movement,
+            duration_ms: 1500
+        }
+    ],
+    conceptual_ability_group_id: 5,
+    weapon_context_type: Items::EItemType::WEAPON_STAFF,
+    animation_tag_caster: "Cast_ArcticLaceration_Staff",
+    vfx_projectile_tag: "VFX_Projectile_IceShard",
+    vfx_target_impact_tag: "VFX_Impact_IceShard",
+    sfx_cast_tag: "SFX_Cast_Staff_Frost",
+    sfx_impact_tag: "SFX_Impact_IceShard",
+    required_class_level: 1,
+    projectile_speed_mps: 40.0f
+},
+
+//=========================================================================
+// GLACIAL CLASS - LEVEL 3: Ice Barricade
+// Conceptual Group ID: 6
+// Required Class Level: 3
+// Base Will Cost: 25 (example)
+// Base Cooldown: 25.0 seconds (example)
+// Description SID: "sid_Ability_IceBarricade_Desc_Shared" (e.g., "Briefly encase yourself in ice, reducing damage and freezing attackers.")
+// Icon ID: "icon_ice_barricade"
+// Category: EAbilityCategory::Buff_Self (Defensive) + EAbilityCategory::Control_HardCC (Retaliation)
+//=========================================================================
+
+ActiveAbilityDefinition {
+    ability_id: 60101, // Assuming one definition for Ice Barricade as its effect is self-applied and weapon-agnostic
+    dev_name_tag: "IceBarricade",
+    display_name_sid: "sid_Ability_IceBarricade_Name",
+    description_sid: "sid_Ability_IceBarricade_Desc", // "Instantly encase yourself in a formidable barrier of ice..."
+    icon_id: "icon_ice_barricade",
+    category: EAbilityCategory::Buff_Self, // Primary is the self-buff/state
+    target_type: EAbilityTargetType::Self,
+    cast_time_sec: 0.0f, // Instant activation
+    cooldown_sec: 25.0f,
+    will_cost: 25,
+    range_meters: 0.0f,
+    aoe_params: {},
+    // Effects_on_caster_self defines the defensive buff/state
+    effects_on_caster_self: [
+        GameplayEffectInstance { 
+            effect_payload_type: RiftForged::Networking::UDP::S2C::RiftStepEffectPayload_ApplyBuffDebuffData,
+            // Need a StatusEffectCategory for "Damage Reduction 75% for 0.75s"
+            // And another for "Retaliatory Freeze on Hit for 0.75s"
+            // Example: buff_debuff_id: StatusEffectCategory_Buff_IceBarricadeState
+            // The game logic for this state would handle the DR and retaliatory freeze.
+            buff_debuff_id: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_Buff_DamageReduction_Generic, // Placeholder, needs specific handling
+            duration_ms: 750 // Duration of the barricade state
+            // Magnitude of DR (75%) would be tied to StatusEffectCategory_Buff_IceBarricadeState's definition
+        }
+    ],
+    // Retaliatory freeze is a consequence of the IceBarricadeState buff, not a direct effect here.
+    conceptual_ability_group_id: 6, 
+    // weapon_context_type: Items::EItemType::NONE; // Effect is weapon-agnostic
+    animation_tag_caster: "Cast_IceBarricade",
+    vfx_caster_self_tag: "VFX_IceBarricade_Form",
+    sfx_cast_tag: "SFX_Cast_IceBarricade",
+    required_class_level: 3
+}
+
+// TODO: Add conceptual data for:
+// Glacial Level 5: Chilling Touch (Self-buff for next attack: +Frost Dmg, Slow)
+// Glacial Level 7: Glacial Lock (AoE CC - Freeze/Stun)
+// Glacial Level 9: Winter's Bulwark (Self Buff: Resilience, Aura, Empower CC)

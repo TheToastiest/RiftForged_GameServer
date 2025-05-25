@@ -2,7 +2,7 @@
 
 // Assuming Vec3 and Quaternion structs are in SharedProtocols/Generated/ and included there.
 // This file provides utility functions.
-#include "../FlatBuffers/V0.0.1/riftforged_common_types_generated.h" // For Vec3 & Quaternion
+#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h" // For Vec3 & Quaternion
 #include <cmath> // For sqrt, sin, cos, acos
 
 // For M_PI if not defined on Windows with <cmath>
@@ -14,8 +14,13 @@ namespace RiftForged {
     namespace Utilities {
         namespace Math {
 
-            using Networking::Shared::Vec3; // Type alias for convenience
-            using Networking::Shared::Quaternion; // Type alias
+            // Type aliases for convenience (if not already present or preferred)
+            using Vec3 = RiftForged::Networking::Shared::Vec3;
+            using Quaternion = RiftForged::Networking::Shared::Quaternion;
+            // Magnitude
+			inline float Magnitude(const Vec3& v) {
+				return std::sqrt(v.x() * v.x() + v.y() * v.y() + v.z() * v.z());
+			}
 
             const float PI_F = static_cast<float>(M_PI);
             const float DEG_TO_RAD_FACTOR = PI_F / 180.0f;
@@ -24,86 +29,113 @@ namespace RiftForged {
             const float VECTOR_NORMALIZATION_EPSILON = 0.00001f;
 
 
+            // --- Vector Operations ---
+
             // Normalizes a Vec3
             inline Vec3 NormalizeVector(const Vec3& v) {
                 float mag_sq = v.x() * v.x() + v.y() * v.y() + v.z() * v.z();
-                if (mag_sq > VECTOR_NORMALIZATION_EPSILON * VECTOR_NORMALIZATION_EPSILON) { // Check against squared epsilon to avoid sqrt if possible
+                if (mag_sq > VECTOR_NORMALIZATION_EPSILON * VECTOR_NORMALIZATION_EPSILON) {
                     float mag = std::sqrt(mag_sq);
                     return Vec3(v.x() / mag, v.y() / mag, v.z() / mag);
                 }
-                return Vec3(0.0f, 0.0f, 0.0f); // Or return original if very small, or a default forward
+                return Vec3(0.0f, 0.0f, 0.0f); // Return zero vector if magnitude is too small
             }
 
-            // Normalizes a Quaternion
+            // ***** NEWLY ADDED: AddVectors *****
+            inline Vec3 AddVectors(const Vec3& v1, const Vec3& v2) {
+                return Vec3(v1.x() + v2.x(), v1.y() + v2.y(), v1.z() + v2.z());
+            }
+            // ***********************************
+
+            // ***** NEWLY ADDED: ScaleVector *****
+            inline Vec3 ScaleVector(const Vec3& v, float scalar) {
+                return Vec3(v.x() * scalar, v.y() * scalar, v.z() * scalar);
+            }
+            // ************************************
+
+            // ***** NEWLY ADDED (Optional but useful): SubtractVectors *****
+            inline Vec3 SubtractVectors(const Vec3& v1, const Vec3& v2) {
+                return Vec3(v1.x() - v2.x(), v1.y() - v2.y(), v1.z() - v2.z());
+            }
+            // *************************************************************
+
+            // ***** NEWLY ADDED (Optional but useful): DotProduct *****
+            inline float DotProduct(const Vec3& v1, const Vec3& v2) {
+                return v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z();
+            }
+            // ********************************************************
+
+            // ***** NEWLY ADDED (Optional but useful): DistanceSquared *****
+            inline float DistanceSquared(const Vec3& v1, const Vec3& v2) {
+                float dx = v1.x() - v2.x();
+                float dy = v1.y() - v2.y();
+                float dz = v1.z() - v2.z();
+                return dx * dx + dy * dy + dz * dz;
+            }
+            // *************************************************************
+
+            // ***** NEWLY ADDED (Optional but useful): Distance *****
+            inline float Distance(const Vec3& v1, const Vec3& v2) {
+                return std::sqrt(DistanceSquared(v1, v2));
+            }
+            // *****************************************************
+
+
+            // --- Quaternion Operations ---
+
+            // Normalize a Quaternion
             inline Quaternion NormalizeQuaternion(const Quaternion& q) {
                 float mag_sq = q.x() * q.x() + q.y() * q.y() + q.z() * q.z() + q.w() * q.w();
-                if (mag_sq > QUATERNION_NORMALIZATION_EPSILON * QUATERNION_NORMALIZATION_EPSILON &&
-                    std::abs(mag_sq - 1.0f) > QUATERNION_NORMALIZATION_EPSILON) { // Avoid sqrt if already normalized
+                if (mag_sq > QUATERNION_NORMALIZATION_EPSILON * QUATERNION_NORMALIZATION_EPSILON) {
                     float mag = std::sqrt(mag_sq);
                     return Quaternion(q.x() / mag, q.y() / mag, q.z() / mag, q.w() / mag);
                 }
-                return q; // Return original if too small to normalize or already normalized
+                return Quaternion(0.0f, 0.0f, 0.0f, 1.0f); // Identity quaternion for zero magnitude
             }
 
-            // Creates a Quaternion representing a rotation around an axis
+            // Create Quaternion from Angle-Axis
             inline Quaternion FromAngleAxis(float angle_degrees, const Vec3& axis) {
-                float angle_radians = angle_degrees * DEG_TO_RAD_FACTOR;
-                float half_angle = angle_radians * 0.5f;
+                float angle_rad = angle_degrees * DEG_TO_RAD_FACTOR;
+                float half_angle = angle_rad * 0.5f;
                 float s = std::sin(half_angle);
-                Vec3 normalized_axis = NormalizeVector(axis);
-                return NormalizeQuaternion(Quaternion(
-                    normalized_axis.x() * s,
-                    normalized_axis.y() * s,
-                    normalized_axis.z() * s,
-                    std::cos(half_angle)
-                ));
+                Vec3 norm_axis = NormalizeVector(axis);
+                return Quaternion(norm_axis.x() * s, norm_axis.y() * s, norm_axis.z() * s, std::cos(half_angle));
             }
 
-            // Multiplies two quaternions (q_result = q_first * q_second)
-            // Order matters: q_first represents the initial orientation, q_second is the rotation to apply.
-            // Or q_result = q_rotation * q_original_orientation for applying world rotation to local.
-            // Let's define q_new = q_rotation_to_apply * q_current_orientation
-            inline Quaternion MultiplyQuaternions(const Quaternion& q_rot, const Quaternion& q_current) {
-                return NormalizeQuaternion(Quaternion(
-                    q_rot.w() * q_current.x() + q_rot.x() * q_current.w() + q_rot.y() * q_current.z() - q_rot.z() * q_current.y(),
-                    q_rot.w() * q_current.y() - q_rot.x() * q_current.z() + q_rot.y() * q_current.w() + q_rot.z() * q_current.x(),
-                    q_rot.w() * q_current.z() + q_rot.x() * q_current.y() - q_rot.y() * q_current.x() + q_rot.z() * q_current.w(),
-                    q_rot.w() * q_current.w() - q_rot.x() * q_current.x() - q_rot.y() * q_current.y() - q_rot.z() * q_current.z()
-                ));
+            // Multiply Quaternions (q2 * q1 applies q1's rotation then q2's)
+            inline Quaternion MultiplyQuaternions(const Quaternion& q1, const Quaternion& q2) {
+                return Quaternion(
+                    q1.w() * q2.x() + q1.x() * q2.w() + q1.y() * q2.z() - q1.z() * q2.y(),
+                    q1.w() * q2.y() - q1.x() * q2.z() + q1.y() * q2.w() + q1.z() * q2.x(),
+                    q1.w() * q2.z() + q1.x() * q2.y() - q1.y() * q2.x() + q1.z() * q2.w(),
+                    q1.w() * q2.w() - q1.x() * q2.x() - q1.y() * q2.y() - q1.z() * q2.z()
+                );
             }
 
-            // Rotates a vector by a quaternion (v_rotated = q * v * q_conjugate)
+            // Rotate a Vector by a Quaternion
             inline Vec3 RotateVectorByQuaternion(const Vec3& v, const Quaternion& q) {
-                // Create a pure quaternion from the vector
-                Quaternion p(v.x(), v.y(), v.z(), 0.0f);
-
-                // Conjugate of q
-                Quaternion q_conj(-q.x(), -q.y(), -q.z(), q.w()); // Assuming q is normalized
-
-                // v_rotated_quat = q * p * q_conj
-                Quaternion temp = MultiplyQuaternions(q, p);
-                Quaternion rotated_p_quat = MultiplyQuaternions(temp, q_conj);
-
-                return Vec3(rotated_p_quat.x(), rotated_p_quat.y(), rotated_p_quat.z());
+                Quaternion p(v.x(), v.y(), v.z(), 0.0f); // Pure quaternion for the vector
+                Quaternion q_conj(-q.x(), -q.y(), -q.z(), q.w()); // Conjugate of q
+                Quaternion result_q = MultiplyQuaternions(MultiplyQuaternions(q, p), q_conj);
+                return Vec3(result_q.x(), result_q.y(), result_q.z());
             }
 
-            // Gets the world-space forward vector (+Y local) from an orientation quaternion
+            // Get World Forward Vector (assuming +Y is forward in local object space)
             inline Vec3 GetWorldForwardVector(const Quaternion& orientation) {
-                // Rotate local forward vector (0, 1, 0) by the orientation quaternion
                 return RotateVectorByQuaternion(Vec3(0.0f, 1.0f, 0.0f), orientation);
             }
 
-            // Gets the world-space right vector (+X local) from an orientation quaternion
+            // Get World Right Vector (assuming +X is right in local object space)
             inline Vec3 GetWorldRightVector(const Quaternion& orientation) {
-                // Rotate local right vector (1, 0, 0) by the orientation quaternion
                 return RotateVectorByQuaternion(Vec3(1.0f, 0.0f, 0.0f), orientation);
             }
 
-            // Gets the world-space up vector (+Z local) from an orientation quaternion
+            // Get World Up Vector (assuming +Z is up in local object space)
             inline Vec3 GetWorldUpVector(const Quaternion& orientation) {
-                // Rotate local up vector (0, 0, 1) by the orientation quaternion
                 return RotateVectorByQuaternion(Vec3(0.0f, 0.0f, 1.0f), orientation);
             }
+
+            // TODO: Add other math utilities as needed (e.g., matrix operations, Lerp, Slerp)
 
         } // namespace Math
     } // namespace Utilities

@@ -1,0 +1,197 @@
+﻿// --- ItemStatsConfig.txt ---
+// Conceptual data entries mapping to the ItemStaticData struct.
+// One entry per unique item definition_id.
+
+//--------------------------------------------
+// WEAPONS
+//--------------------------------------------
+ItemStaticData {
+    definition_id: 1001,
+    item_type: WEAPON_SWORD, // Assuming direct use of enum value names
+    dev_name_tag: "wep_sword_t1_copper",
+    display_name_sid: "sid_ItemName_CopperSword",
+    description_sid: "sid_ItemDesc_CopperSword",
+    rarity: NORMAL,
+    max_stack_size: 1,
+    is_unique: false,
+    is_quest_item: false,
+    can_be_sold_to_vendor: true,
+    vendor_sell_price_shimmer: 50,
+    vendor_buy_price_shimmer: 200, // If vendors sell it
+    is_tradable: true,
+    icon_resource_id: "ico_wep_sword_copper",
+    model_resource_id: "mdl_wep_sword_copper",
+    equip_slot: MAIN_HAND, // Or OFF_HAND if dual-wieldable
+    required_level: 1,
+    material_tier: TIER_1, // e.g., Copper equivalent
+    base_durability: 0, // No durability for now
+
+    // Type-Specific: WeaponStaticProps
+    weapon_props: {
+        base_physical_damage_min: 8.0,
+        base_physical_damage_max: 12.0,
+        attack_speed: 1.1, // Attacks per second
+        range_meters: 2.5,
+        critical_hit_chance_base_percent: 5.0,
+        critical_hit_damage_base_multiplier: 2.0,
+        is_gildable: true
+    },
+    // Other props (armor_props, consumable_props, etc.) would be empty/default for a weapon.
+},
+
+ItemStaticData {
+    definition_id: 1002,
+    item_type: WEAPON_BOW,
+    dev_name_tag: "wep_bow_t1_roughwood",
+    display_name_sid: "sid_ItemName_RoughWoodBow",
+    description_sid: "sid_ItemDesc_RoughWoodBow",
+    rarity: NORMAL,
+    max_stack_size: 1,
+    equip_slot: MAIN_HAND, // Bows often 2H in terms of slot usage, or MAIN_HAND if quivers are OFF_HAND
+    required_level: 1,
+    material_tier: TIER_1,
+    // ... other common props ...
+    is_tradable: true,
+    base_durability: 0,
+
+    weapon_props: {
+        base_physical_damage_min: 10.0,
+        base_physical_damage_max: 15.0,
+        attack_speed: 0.9, // Slower than a sword
+        range_meters: 30.0,
+        critical_hit_chance_base_percent: 6.0,
+        critical_hit_damage_base_multiplier: 2.0,
+        is_gildable: true
+    },
+},
+
+//--------------------------------------------
+// ARMOR
+//--------------------------------------------
+ItemStaticData {
+    definition_id: 2001,
+    item_type: ARMOR_CHEST_LIGHT,
+    dev_name_tag: "arm_chest_light_t1_cloth",
+    display_name_sid: "sid_ItemName_PaddedClothTunic",
+    description_sid: "sid_ItemDesc_PaddedClothTunic",
+    rarity: NORMAL,
+    // ... other common props ...
+    equip_slot: CHEST,
+    required_level: 1,
+    material_tier: TIER_1,
+    is_tradable: true,
+    base_durability: 0,
+
+    armor_props: {
+        base_defense: 20.0,
+        will_regeneration_penalty_percent: 0.0, // Light armor
+        movement_speed_reduction_percent: 0.0 
+    },
+},
+
+ItemStaticData {
+    definition_id: 2002,
+    item_type: ARMOR_SHIELD_HEAVY,
+    dev_name_tag: "arm_shield_heavy_t1_iron",
+    display_name_sid: "sid_ItemName_IronKiteShield",
+    description_sid: "sid_ItemDesc_IronKiteShield",
+    rarity: NORMAL,
+    equip_slot: OFF_HAND,
+    required_level: 3,
+    material_tier: TIER_2, // Iron equivalent
+    is_tradable: true,
+    base_durability: 0,
+
+    armor_props: {
+        base_defense: 35.0,
+        will_regeneration_penalty_percent: 0.0, // Shields don't affect Will regen
+        movement_speed_reduction_percent: 0.07, // 7% movement speed reduction for heavy shield
+        block_damage_reduction_percent: 0.50, // Blocks 50% of damage
+        block_stamina_cost: 15.0 
+    },
+},
+
+//--------------------------------------------
+// CONSUMABLES
+//--------------------------------------------
+ItemStaticData {
+    definition_id: 3001,
+    item_type: CONSUMABLE_POTION,
+    dev_name_tag: "con_potion_health_minor",
+    display_name_sid: "sid_ItemName_MinorHealthPotion",
+    description_sid: "sid_ItemDesc_MinorHealthPotion",
+    rarity: NORMAL,
+    max_stack_size: 20,
+    // ... other common props ...
+    equip_slot: NONE_SLOT,
+    is_tradable: true,
+    base_durability: 0,
+
+    consumable_props: {
+        effect_type: ConsumableStaticProps::EEffectType::RESTORE_HEALTH,
+        restore_amount_flat: 50.0,
+        restore_amount_percent_max: 0.0,
+        status_effect_to_apply: RiftForged::Networking::Shared::StatusEffectCategory::StatusEffectCategory_None, // Using generated name
+        effect_duration_ms: 0,
+        usage_cooldown_sec: 30.0 // Cooldown for using any health potion perhaps
+    },
+},
+
+//--------------------------------------------
+// STAR MAP POINT UPGRADES
+//--------------------------------------------
+ItemStaticData {
+    definition_id: 4001,
+    item_type: ITEM_STAR_MAP_POINT_UPGRADE,
+    dev_name_tag: "smpu_plus_1",
+    display_name_sid: "sid_ItemName_StarMapUpgradePlus1",
+    description_sid: "sid_ItemDesc_StarMapUpgradePlus1", // "Grants +1 Star Map Point. Used to craft the +2 version."
+    rarity: RARE,
+    max_stack_size: 1, // Or more if you allow hoarding before use
+    is_tradable: true, // You mentioned these could be sold/kept
+    // ... other common props ...
+    equip_slot: NONE_SLOT,
+    base_durability: 0,
+
+    star_map_point_props: {
+        points_granted: 1
+    },
+},
+
+ItemStaticData {
+    definition_id: 4002,
+    item_type: ITEM_STAR_MAP_POINT_UPGRADE,
+    dev_name_tag: "smpu_plus_2",
+    display_name_sid: "sid_ItemName_StarMapUpgradePlus2",
+    description_sid: "sid_ItemDesc_StarMapUpgradePlus2", // "Grants +2 Star Map Points. Used to craft the +3 version."
+    rarity: RARE,
+    // ... (Recipe for this would require item_id 4001) ...
+    star_map_point_props: {
+        points_granted: 2 // Note: user said a +10 item grants points 1-10. This implies the item grants the *total* up to that number,
+                          // or it grants that *many additional points*. "points_granted" should mean how many new points you get.
+                          // The logic for "filling up to" vs "adding raw N" needs to be in the consumption logic.
+                          // Let's assume points_granted means "you gain this many new points".
+    },
+},
+
+
+//--------------------------------------------
+// CRAFTING MATERIALS (Basic Elemental - Soulbound)
+//--------------------------------------------
+ItemStaticData {
+    definition_id: 5001,
+    item_type: MATERIAL_ELEMENTAL_AIR_SOLIDIFIED,
+    dev_name_tag: "mat_elem_air_solid",
+    display_name_sid: "sid_ItemName_SolidifiedAir",
+    description_sid: "sid_ItemDesc_SolidifiedAir",
+    rarity: NORMAL,
+    max_stack_size: 100, // Example
+    is_tradable: false, // Soulbound
+    vendor_sell_price_shimmer: 1, // Maybe a tiny value or 0 if truly no selling
+    // ...
+    equip_slot: NONE_SLOT,
+    base_durability: 0,
+    material_tier: TIER_0_BASE, // Or specific tier if they have power levels
+},
+
+// ... and so on for every item in your game.

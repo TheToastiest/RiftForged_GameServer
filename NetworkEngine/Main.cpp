@@ -12,15 +12,15 @@
 //#include <vector>
 //#include <thread>         // For std::this_thread::sleep_for
 //#include <chrono>         // For std::chrono::milliseconds
-
+//
 // Define MAX_WORKER_THREADS (can also be a const in UDPSocketAsync.h or from config)
 // const int MAX_WORKER_THREADS = 6; // This was in your UDPSocketAsync.cpp, ensure it's accessible or defined
-
+//
 // Global flag to signal shutdown for the input thread and main loop
 //std::atomic<bool> g_serverRunning(true);
 //std::condition_variable g_shutdownCondition;
 //std::mutex g_shutdownMutex;
-
+//
 //void AdminConsoleThread() {
 //    std::string line;
 //    std::cout << "Server Admin Console: Type 'q' or 'quit' to initiate shutdown." << std::endl;
@@ -52,9 +52,7 @@
 //    }
 //    std::cout << "AdminConsoleThread exiting." << std::endl;
 //}
-
-
-//int main() {
+////int main() {
 //    std::cout << "RiftForged UDPServer Starting..." << std::endl;
 //
 //    RiftForged::GameLogic::PlayerManager playerManager;
@@ -74,7 +72,7 @@
 //
 //    RiftForged::Server::GameServerEngine gameEngine(playerManager, udpSocket /*, gameplayEngine */);
 //
-//    if (!udpSocket.Init()) {
+//     if (!udpSocket.Init()) {
 //        std::cerr << "MAIN: Failed to initialize UDPSocketAsync." << std::endl;
 //        return -1;
 //    }

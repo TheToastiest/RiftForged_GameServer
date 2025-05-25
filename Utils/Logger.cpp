@@ -1,4 +1,6 @@
-﻿#include "Logger.h" // Should be first
+﻿// Copyright (C) 2023 RiftForged
+
+#include "Logger.h" // Should be first
 
 #include <spdlog/sinks/stdout_color_sinks.h> // For console output
 #include <spdlog/sinks/rotating_file_sink.h> // For rotating log files

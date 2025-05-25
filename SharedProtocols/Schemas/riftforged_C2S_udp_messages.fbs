@@ -1,6 +1,8 @@
 ﻿// File: Schemas/riftforged_c2s_udp_messages.fbs
-// Protocol Version: 0.0.1
+// Protocol Version: 0.0.3
 // Description: Defines Client-to-Server messages for real-time UDP communication.
+// This file is part of Riftforged.
+// Copyright (C) 2023 Riftforged
 
 include "riftforged_common_types.fbs"; // For Shared.Vec3, Shared.Quaternion, etc.
 
@@ -41,6 +43,17 @@ table C2S_RiftStepActivationMsg {
   directional_intent:RiftStepDirectionalIntent = Default_Backward;
 }
 
+// Add this table definition
+table C2S_BasicAttackIntentMsg {
+  client_timestamp_ms:ulong;
+  // World-space normalized vector indicating player's current aiming direction.
+  // For melee, server uses this with player orientation to define hit arc/cone.
+  // For ranged, this is the initial direction of the attack/projectile.
+  aim_direction:RiftForged.Networking.Shared.Vec3 (required); 
+  target_entity_id:ulong = 0; // Optional: if client has a "soft" target selected. 
+                              // Server still validates hit based on aim_direction & physics.
+}
+
 // Generic message for using other targeted abilities
 table C2S_UseAbilityMsg {
   client_timestamp_ms:ulong;
@@ -62,6 +75,7 @@ union C2S_UDP_Payload {
   MovementInput:C2S_MovementInputMsg,
   TurnIntent:C2S_TurnIntentMsg, // Added
   RiftStepActivation:C2S_RiftStepActivationMsg, 
+  BasicAttackIntent:C2S_BasicAttackIntentMsg, // << NEW
   UseAbility:C2S_UseAbilityMsg,
   Ping:C2S_PingMsg
 }

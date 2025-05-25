@@ -1,20 +1,26 @@
-﻿#include "PacketProcessor.h"
-#include "MessageDispatcher.h" // For m_messageDispatcher.DispatchC2SMessage
-// GamePacketHeader.h is included via PacketProcessor.h
-// NetworkCommon.h (for S2C_Response) is included via PacketProcessor.h
-// NetworkEndpoint.h is included via PacketProcessor.h -> NetworkCommon.h
-#include <iostream>                     // Replace with your actual logging system
-#include <cstring>                      // For memcpy
+﻿// File: PacketProcessor.cpp
+// RiftForged Gaming
+// Copyright (c) 2023-2025 RiftForged Game Development Team
+
+
+#include "PacketProcessor.h"        // Includes NetworkCommon.h, GamePacketHeader.h, forward declares MessageDispatcher & GameplayEngine
+#include "MessageDispatcher.h"      // For m_messageDispatcher.DispatchC2SMessage
+#include "../Gameplay/GameplayEngine.h" // For m_gameplayEngine.InitializePlayerInWorld and accessing PlayerManager
+#include "../Gameplay/PlayerManager.h"  // For m_gameplayEngine.GetPlayerManager().GetOrCreatePlayer()
+#include "../Gameplay/ActivePlayer.h"    // For ActivePlayer* type
+#include "../Utils/Logger.h"        // For RF_NETWORK_ERROR, RF_NETWORK_INFO, etc. (Ensure path is correct)
+
+#include <cstring> // For std::memcpy
+// Note: <iostream> was previously used for std::cerr/cout, assuming Logger.h now provides RF_... macros for all logging.
 
 namespace RiftForged {
     namespace Networking {
 
-        PacketProcessor::PacketProcessor(MessageDispatcher& dispatcher)
-            : m_messageDispatcher(dispatcher)
-            // If you add m_reliabilityManager:
-            // , m_reliabilityManager(reliabilityManager) 
-        {
-            std::cout << "PacketProcessor: Initialized." << std::endl;
+        // Constructor now takes GameplayEngine
+        PacketProcessor::PacketProcessor(MessageDispatcher& dispatcher, RiftForged::Gameplay::GameplayEngine& gameplayEngine)
+            : m_messageDispatcher(dispatcher),
+            m_gameplayEngine(gameplayEngine) { // Initialize m_gameplayEngine
+            RF_NETWORK_INFO("PacketProcessor: Initialized with MessageDispatcher and GameplayEngine.");
         }
 
         std::optional<S2C_Response> PacketProcessor::ProcessIncomingRawPacket(
@@ -23,60 +29,66 @@ namespace RiftForged {
             const NetworkEndpoint& sender_endpoint) {
 
             // 1. Validate basic packet size
-            if (raw_length < static_cast<int>(GetGamePacketHeaderSize())) {
-                std::cerr << "PacketProcessor: Packet from " << sender_endpoint.ToString()
-                    << " too small (" << raw_length << " bytes) to contain GamePacketHeader." << std::endl;
-                return std::nullopt; // Return empty optional: no valid response to generate from this error
+            if (raw_length < static_cast<int>(GetGamePacketHeaderSize())) { //
+                RF_NETWORK_ERROR("PacketProcessor: Packet from {} too small ({} bytes) for GamePacketHeader.", sender_endpoint.ToString(), raw_length);
+                return std::nullopt;
             }
 
-            // 2. Deserialize our custom GamePacketHeader from the start of the buffer
-            GamePacketHeader header; // Our custom header struct
+            // 2. Deserialize our custom GamePacketHeader
+            GamePacketHeader header; //
             std::memcpy(&header, raw_buffer, GetGamePacketHeaderSize());
 
             // 3. Validate Protocol ID
-            if (header.protocolId != CURRENT_PROTOCOL_ID_VERSION) {
-                std::cerr << "PacketProcessor: Mismatched protocol ID from " << sender_endpoint.ToString()
-                    << ". Expected: " << CURRENT_PROTOCOL_ID_VERSION << ", Got: " << header.protocolId << std::endl;
-                // TODO: Increment counter or handle version mismatch more actively
-                return std::nullopt; // No valid response
+            if (header.protocolId != CURRENT_PROTOCOL_ID_VERSION) { //
+                RF_NETWORK_WARN("PacketProcessor: Mismatched protocol ID from {}. Expected: {}, Got: {}",
+                    sender_endpoint.ToString(), CURRENT_PROTOCOL_ID_VERSION, header.protocolId);
+                return std::nullopt;
             }
 
-            // 4. TODO: Process Reliability Information from the header
-            // Example:
-            // bool should_dispatch_payload = m_reliabilityManager.ProcessIncomingHeader(sender_endpoint, header);
-            // std::optional<S2C_Response> ack_response = m_reliabilityManager.GenerateAckResponseIfNeeded(sender_endpoint);
-            // if (ack_response.has_value()) {
-            //     // If reliability layer generated a direct ACK packet to send, send it.
-            //     // This logic would be in WorkerThread based on what ProcessIncomingRawPacket returns.
-            //     // For now, let's assume this function should return that ACK response.
-            //     return ack_response; 
-            // }
-            // if (!should_dispatch_payload) {
-            //     // e.g., it was a pure ACK, or a duplicate reliable packet already processed.
-            //     return std::nullopt; // No game message to dispatch, no further response from this function.
-            // }
-            // For now, we'll bypass detailed reliability logic and proceed to dispatch.
+            // --- NEW: Player Creation and World Initialization Logic ---
+            bool player_was_newly_created = false;
+            // Assuming GameplayEngine has a public member m_playerManager or a GetPlayerManager() method.
+            // Let's use a conceptual GetPlayerManager() for better encapsulation.
+            RiftForged::GameLogic::ActivePlayer* player =
+                m_gameplayEngine.GetPlayerManager().GetOrCreatePlayer(sender_endpoint, player_was_newly_created);
+            // GetOrCreatePlayer signature needs to be: ActivePlayer* GetOrCreatePlayer(const NetworkEndpoint&, bool&);
 
+            if (!player) {
+                RF_NETWORK_ERROR("PacketProcessor: Failed to get or create player for endpoint: {}. Dropping packet for MessageType: {}",
+                    sender_endpoint.ToString(), static_cast<int>(header.messageType));
+                return std::nullopt;
+            }
+
+            if (player && player_was_newly_created) {
+                RF_NETWORK_INFO("PacketProcessor: New player {} detected from endpoint {}. Initializing in world.", player->playerId, sender_endpoint.ToString());
+
+                // Define spawn parameters (these should eventually come from a spawn manager or world settings)
+                RiftForged::Networking::Shared::Vec3 spawn_position(0.0f, 0.0f, 1.0f); // Example spawn point
+                RiftForged::Networking::Shared::Quaternion spawn_orientation(0.0f, 0.0f, 0.0f, 1.0f); // Identity orientation
+
+                // Call GameplayEngine to create the PhysX controller and set initial logical/physical state
+                m_gameplayEngine.InitializePlayerInWorld(player, spawn_position, spawn_orientation); //
+                // InitializePlayerInWorld will internally call m_physicsEngine.CreateCharacterController and SetCharacterControllerOrientation
+            }
+            // --- END NEW Player Creation and World Initialization Logic ---
+
+            // 4. TODO: Process Reliability Information from the header (your existing TODO)
+            // ...
 
             // 5. Determine the start and size of the FlatBuffer payload
             const uint8_t* flatbuffer_payload_ptr = reinterpret_cast<const uint8_t*>(raw_buffer + GetGamePacketHeaderSize());
             int flatbuffer_payload_size = raw_length - static_cast<int>(GetGamePacketHeaderSize());
 
             if (flatbuffer_payload_size < 0) {
-                std::cerr << "PacketProcessor: Negative FlatBuffer payload size calculated from "
-                    << sender_endpoint.ToString() << ". Header size: " << GetGamePacketHeaderSize()
-                    << ", Total length: " << raw_length << std::endl;
-                return std::nullopt; // Error, no valid response
+                RF_NETWORK_ERROR("PacketProcessor: Negative FlatBuffer payload size calculated from {}. Header size: {}, Total length: {}. MessageType: {}",
+                    sender_endpoint.ToString(), GetGamePacketHeaderSize(), raw_length, static_cast<int>(header.messageType));
+                return std::nullopt;
             }
 
-            // If the message type indicates there should be no payload, but there is, it could be an error.
-            // Or, if payload_size is 0, but the messageType expects a payload.
-            // For now, MessageDispatcher will handle FlatBuffer verification.
-            // A simple check for payload_size == 0 could be done here if some MessageTypes are payload-less.
-            // Example: if (header.messageType == MessageType::SomeTypeWithoutPayload && flatbuffer_payload_size > 0) { log error }
-
-            // 6. Dispatch to the MessageDispatcher and return whatever S2C_Response it generates (if any)
-            return m_messageDispatcher.DispatchC2SMessage(header, flatbuffer_payload_ptr, flatbuffer_payload_size, sender_endpoint);
+            // 6. Dispatch to the MessageDispatcher
+            // Pass the ActivePlayer* pointer to the dispatcher, which can then pass it to the handlers.
+            // This assumes DispatchC2SMessage is updated to accept ActivePlayer*.
+            return m_messageDispatcher.DispatchC2SMessage(header, flatbuffer_payload_ptr, flatbuffer_payload_size, sender_endpoint, player);
         }
 
     } // namespace Networking

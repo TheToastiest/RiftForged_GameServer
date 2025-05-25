@@ -19,13 +19,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PhysicsEngine", "PhysicsEng
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests_CoreEngine", "Tests_CoreEngine\Tests_CoreEngine.vcxproj", "{FBF9DB8E-BD94-44D6-BE1B-A713E23E2DBA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests_Gameplay", "Tests_Gameplay\Tests_Gameplay.vcxproj", "{26882B66-FC18-403F-8BFE-409EE53464AA}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IOCPServer", "IOCPEngine\IOCPEngine.vcxproj", "{D60D455C-C8E1-40E0-BB06-13B937AAD924}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SharedProtocols", "SharedProtocols\SharedProtocols.vcxproj", "{F0F3E3C3-9DFD-4FDD-B7A0-D8B1C0C7D813}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test-UDPServer", "Test-UDPServer\Test-UDPServer.vcxproj", "{ADBD3E58-82B6-412C-941A-2A21D578BCB6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test_Client", "Test-UDPServer\Test-UDPServer.vcxproj", "{ADBD3E58-82B6-412C-941A-2A21D578BCB6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -99,14 +97,6 @@ Global
 		{FBF9DB8E-BD94-44D6-BE1B-A713E23E2DBA}.Release|x64.Build.0 = Release|x64
 		{FBF9DB8E-BD94-44D6-BE1B-A713E23E2DBA}.Release|x86.ActiveCfg = Release|Win32
 		{FBF9DB8E-BD94-44D6-BE1B-A713E23E2DBA}.Release|x86.Build.0 = Release|Win32
-		{26882B66-FC18-403F-8BFE-409EE53464AA}.Debug|x64.ActiveCfg = Debug|x64
-		{26882B66-FC18-403F-8BFE-409EE53464AA}.Debug|x64.Build.0 = Debug|x64
-		{26882B66-FC18-403F-8BFE-409EE53464AA}.Debug|x86.ActiveCfg = Debug|Win32
-		{26882B66-FC18-403F-8BFE-409EE53464AA}.Debug|x86.Build.0 = Debug|Win32
-		{26882B66-FC18-403F-8BFE-409EE53464AA}.Release|x64.ActiveCfg = Release|x64
-		{26882B66-FC18-403F-8BFE-409EE53464AA}.Release|x64.Build.0 = Release|x64
-		{26882B66-FC18-403F-8BFE-409EE53464AA}.Release|x86.ActiveCfg = Release|Win32
-		{26882B66-FC18-403F-8BFE-409EE53464AA}.Release|x86.Build.0 = Release|Win32
 		{D60D455C-C8E1-40E0-BB06-13B937AAD924}.Debug|x64.ActiveCfg = Debug|x64
 		{D60D455C-C8E1-40E0-BB06-13B937AAD924}.Debug|x64.Build.0 = Debug|x64
 		{D60D455C-C8E1-40E0-BB06-13B937AAD924}.Debug|x86.ActiveCfg = Debug|Win32

@@ -1,6 +1,8 @@
 ﻿// File: Schemas/riftforged_common_types.fbs
-// Protocol Version: 0.0.1
+// Protocol Version: 0.0.3
 // Description: Defines common, shared data structures and enums for RiftForged networking.
+// This file is part of Riftforged.
+// Copyright (C) 2023 Riftforged
 
 namespace RiftForged.Networking.Shared;
 
@@ -19,20 +21,29 @@ struct Quaternion {
   w:float;
 }
 
+
 // Consolidated Damage Types reflecting class themes and gameplay mechanics.
 enum DamageType : byte {
-  Physical = 0,       // Standard physical, weapon damage, kinetic impacts, gravity/force effects.
-  Radiant = 1,        // Solar abilities (e.g., Solarii Vanguard), Fire, Light, Holy.
-  Frost = 2,          // Aegis/Glacial abilities (e.g., Glacial Order, Aegis of the North), Ice, Cold.
-  Shock = 3,          // Lightning, Electrical.
-  Necrotic = 4,       // Revenant Pact: "Necrotic Energy & Survival Mastery", life drain, soul magic.
-  Void = 5,           // Vaelith's power, Shadow (e.g., Twilight Allegiance "Entropic Strike Scaling"), Entropy, Corruption.
-  Cosmic = 6,         // Formerly Astral; for Astral Communion: "Astral Surge", celestial, dimensional power.
-  Poison = 7,         // For damage-over-time toxins.
-  Nature = 8,         // For Verdant Pact or other nature-themed classes (earth, thorns).
-  Aetherial = 9       // Pure/direct/untyped magical energy.
+  None = 0,
+  Physical = 1,       // Standard physical, weapon damage, kinetic impacts, gravity/force effects.
+  Radiant = 2,        // Solar abilities (e.g., Solarii Vanguard), Fire, Light, Holy.
+  Frost = 3,          // Aegis/Glacial abilities (e.g., Glacial Order, Aegis of the North), Ice, Cold.
+  Shock = 4,          // Lightning, Electrical.
+  Necrotic = 5,       // Revenant Pact: "Necrotic Energy & Survival Mastery", life drain, soul magic.
+  Void = 6,           // Vaelith's power, Shadow (e.g., Twilight Allegiance "Entropic Strike Scaling"), Entropy, Corruption.
+  Cosmic = 7,         // Formerly Astral; for Astral Communion: "Astral Surge", celestial, dimensional power.
+  Poison = 8,         // For damage-over-time toxins.
+  Nature = 9,         // For Verdant Pact or other nature-themed classes (earth, thorns).
+  Lightning = 10,
+  Aetherial = 11       // Pure/direct/untyped magical energy.
 }
 
+// Existing, ensure is_crit is present
+struct DamageInstance {
+  amount:int;
+  type:DamageType;
+  is_crit:bool = false; // Add if not there, with a default
+}
 
 // Animation States - Build upon as more are needed. 
 enum AnimationState : uint { // Or byte if you don't need many
@@ -49,19 +60,13 @@ enum AnimationState : uint { // Or byte if you don't need many
   // ... other states ...
 }
 
-// Represents an instance of damage dealt.
-struct DamageInstance {
-  amount:uint;
-  type:DamageType;
-  // is_critical_hit:bool; // Example of an optional field for later
-}
-
 // Defines the intensity/type of a stun application.
 enum StunSeverity : byte {
-  Light = 0,    // Short duration, might allow certain minor actions.
-  Medium = 1,   // Standard duration, more restrictive.
-  Heavy = 2,    // Long duration, very restrictive.
-  Root = 3      // Prevents movement but might allow other actions.
+  None = 0,
+  Light = 1,    // Short duration, might allow certain minor actions.
+  Medium = 2,   // Standard duration, more restrictive.
+  Heavy = 3,    // Long duration, very restrictive.
+  Root = 4      // Prevents movement but might allow other actions.
 }
 
 // Describes the specifics of a stun when it's applied.

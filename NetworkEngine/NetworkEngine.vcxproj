@@ -110,6 +110,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\blaze\PhysX\physx\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +135,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AbilityMessageHandler.h" />
+    <ClInclude Include="BasicAttackMessageHandler.h" />
     <ClInclude Include="GamePacketHeader.h" />
     <ClInclude Include="ConfigLoader.h" />
     <ClInclude Include="MessageDispatcher.h" />
@@ -154,6 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AbilityMessageHandler.cpp" />
+    <ClCompile Include="BasicAttackMessageHandler.cpp" />
     <ClCompile Include="MessageDispatcher.cpp" />
     <ClCompile Include="MovementMessageHandler.cpp" />
     <ClCompile Include="PacketProcessor.cpp" />

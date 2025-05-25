@@ -110,6 +110,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>C:\Users\blaze\PhysX\physx\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -133,19 +134,31 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ActivePlayer.cpp" />
     <ClCompile Include="GameplayEngine.cpp" />
     <ClCompile Include="PlayerManager.cpp" />
+    <ClCompile Include="AbilityLogic.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ActivePlayer.h" />
+    <ClInclude Include="CombatLogic.h" />
+    <ClInclude Include="CraftingMaterials.h" />
     <ClInclude Include="GameplayEngine.h" />
+    <ClInclude Include="ItemStaticData.h" />
+    <ClInclude Include="ItemType.h" />
     <ClInclude Include="PlayerManager.h" />
     <ClInclude Include="RiftStepLogic.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\PhysicsEngine\PhysicsEngine.vcxproj">
+      <Project>{c0cc875e-817b-407b-a6f7-253f48e6ca7f}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\Utils\Utils.vcxproj">
       <Project>{b230bd30-0f70-4d1c-a3c1-386aa6325e63}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ItemStatData.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

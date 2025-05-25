@@ -1,70 +1,104 @@
-﻿#pragma once
-// Ensure ActivePlayer.h path is correct from GameplayEngine's perspective
-#include "ActivePlayer.h" 
-#include "RiftStepLogic.h"  // For RiftStepOutcome
-// For C2S::RiftStepDirectionalIntent from the FlatBuffers messages
-#include "../FlatBuffers/V0.0.1/riftforged_c2s_udp_messages_generated.h"
-#include "../FlatBuffers/V0.0.1/riftforged_s2c_udp_messages_generated.h"
-#include "../FlatBuffers/V0.0.1/riftforged_common_types_generated.h"
+﻿// File: GameplayEngine/GameplayEngine.h
+// Copyright (c) 2023-2025 RiftForged Game Development Team
+#pragma once
+
+// Project-specific headers
+#include "ActivePlayer.h"   // Defines GameLogic::ActivePlayer
+#include "PlayerManager.h"  // Defines GameLogic::PlayerManager
+#include "RiftStepLogic.h"  // Defines GameLogic::RiftStepOutcome, GameLogic::ERiftStepType etc.
+#include "CombatLogic.h"    // Defines GameLogic::AttackOutcome (Assumed to exist) 
+
+#include "../PhysicsEngine/PhysicsEngine.h" // Defines Physics::PhysicsEngine
+
+// FlatBuffers generated headers (Assuming V0.0.3 is current)
+#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h" // For C2S::RiftStepDirectionalIntent
+#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h" // Potentially for constructing S2C messages later
+#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"   // For Shared::Vec3 etc.
+
+// Utility headers
 #include "../Utils/MathUtil.h"
-#include "../Utils/Logger.h" // For RF_GAMEPLAY_DEBUG, RF_GAMEPLAY_INFO, etc.
+#include "../Utils/Logger.h"    // For RF_GAMEPLAY_DEBUG, RF_GAMEPLAY_INFO, etc.
 
 namespace RiftForged {
-    // Forward declare PhysicsEngine if it's a dependency to be injected later
-    // namespace Physics { class PhysicsEngine; }
-
     namespace Gameplay {
 
         class GameplayEngine {
         public:
-            GameplayEngine(/* Potential dependencies like PhysicsEngine& physics */);
+            // Constructor injecting essential dependencies
+            GameplayEngine(RiftForged::GameLogic::PlayerManager& playerManager,
+                RiftForged::Physics::PhysicsEngine& physicsEngine);
+
+            // Initialize player in the physics world
+            void InitializePlayerInWorld(
+                RiftForged::GameLogic::ActivePlayer* player,
+                const RiftForged::Networking::Shared::Vec3& spawn_position,
+                const RiftForged::Networking::Shared::Quaternion& spawn_orientation
+            );
+
+            // GetPlayerManager
+            RiftForged::GameLogic::PlayerManager& GetPlayerManager(); // Or const version if appropriate
 
             // --- Player Actions ---
+
+            // Handles player orientation changes based on client input
             void TurnPlayer(RiftForged::GameLogic::ActivePlayer* player, float turn_angle_degrees_delta);
 
+            // Processes player movement input and interacts with the PhysicsEngine
             void ProcessMovement(
                 RiftForged::GameLogic::ActivePlayer* player,
                 const RiftForged::Networking::Shared::Vec3& local_desired_direction_from_client,
-                bool is_sprinting
+                bool is_sprinting,
+                float delta_time_sec // Time elapsed for this tick/frame
             );
 
+            // Orchestrates the RiftStep ability for a player
             RiftForged::GameLogic::RiftStepOutcome ExecuteRiftStep(
                 RiftForged::GameLogic::ActivePlayer* player,
                 RiftForged::Networking::UDP::C2S::RiftStepDirectionalIntent intent
             );
 
-                // TODO: Add more ability execution methods here, e.g.:
-			    // SomeAbilityOutcome ExecuteBasicMelee(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
-			    // SomeAbilityOutcome ExecuteBasicRanged(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
-                // 
-			    // SomeAbilityOutcome ExecuteSolarStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
-                // SomeAbilityOutcome ExecuteSolarFlare(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
-				// SomeAbilityOutcome ExecuteGlacialBolt(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
-				// SomeAbilityOutcome ExecuteGlacialStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
-				// SomeAbilityOutcome ExecuteVerdantStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
-				// SomeAbilityOutcome ExecuteVerdantLash(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
-				// SomeAbilityOutcome ExecuteVerdantHealingLink(GameLogic::ActivePlayer* healer, const BasicAttackTargetInfo& target);
-				// SomeAbilityOutcome ExecuteVerdantLifegivingBoon(GameLogic::ActivePlayer* healer, const Networking::Shared::Vec3& target_point);
-				// SomeAbilityOutcome ExecuteRiftBolt(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
-				// SomeAbilityOutcome ExecuteRiftStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
+            // Orchestrates a basic attack for a player
+            RiftForged::GameLogic::AttackOutcome ExecuteBasicAttack(
+                RiftForged::GameLogic::ActivePlayer* attacker,
+                const RiftForged::Networking::Shared::Vec3& world_aim_direction,
+                uint64_t optional_target_entity_id // 0 if no specific target lock
+            );
+
+            // --- Potentially other gameplay logic methods ---
+            // void UpdateGameWorld(float delta_time_sec); // Example for world events, NPC AI ticks, etc.          
+            // void ApplyStatusEffectToPlayer(GameLogic::ActivePlayer* player, Networking::Shared::StatusEffectCategory effect, uint32_t duration_ms, float magnitude);
+            
+            // Ability Placeholder Logic
+            // SomeAbilityOutcome ExecuteSolarStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
+            // SomeAbilityOutcome ExecuteSolarFlare(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
+            // SomeAbilityOutcome ExecuteGlacialBolt(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
+            // SomeAbilityOutcome ExecuteGlacialStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
+            // SomeAbilityOutcome ExecuteVerdantStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
+            // SomeAbilityOutcome ExecuteVerdantLash(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
+            // SomeAbilityOutcome ExecuteVerdantHealingLink(GameLogic::ActivePlayer* healer, const BasicAttackTargetInfo& target);
+            // SomeAbilityOutcome ExecuteVerdantLifegivingBoon(GameLogic::ActivePlayer* healer, const Networking::Shared::Vec3& target_point);
+            // SomeAbilityOutcome ExecuteRiftBolt(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);
+            // SomeAbilityOutcome ExecuteRiftStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
 
         private:
-            // RiftForged::Physics::PhysicsEngine* m_physicsEngine; // Example dependency
+            RiftForged::GameLogic::PlayerManager& m_playerManager;
+            RiftForged::Physics::PhysicsEngine& m_physicsEngine;
 
-            // --- Game Constants (can be loaded from config files later) ---
-            // RiftStep
-            const float RIFTSTEP_BASE_DISTANCE = 5.0f;
-            const float RIFTSTEP_BASE_COOLDOWN_SEC = 1.25f;
-            const float RIFTSTEP_COSMETIC_TRAVEL_TIME_SEC = 0.25f; // For client visuals, server logic is instant
-            const float RIFTSTEP_MIN_COOLDOWN_SEC = 0.5f;
-            const uint32_t RIFTSTEP_ABILITY_ID = 1001;      // Example unique ID for RiftStep for cooldown map
+            // --- Core Game Constants (Consider moving to a dedicated config/constants file/namespace later) ---
 
-            // Movement
-            // Displacement per logic call (server tick should define delta_time for speed later)
-            const float BASE_WALK_DISPLACEMENT_PER_CALL = 0.1f;
-            const float SPRINT_SPEED_MULTIPLIER = 1.5f;
-            //const float PLAYER_TURN_DEGREES_PER_INPUT_PRESS = 5.0f; // Example default turn increment
+            // RiftStep - Min cooldown is a global rule. Ability ID to key into player's cooldown map.
+            // Base distance/cooldown are now per RiftStepDefinition on the ActivePlayer.
+            static constexpr float RIFTSTEP_MIN_COOLDOWN_SEC = 0.25f; // Absolute minimum cooldown achievable
+            // static constexpr uint32_t RIFTSTEP_ABILITY_ID = 1; // Defined in ActivePlayer.h, ensure consistency or centralize
+
+            // Movement - Speeds in units (e.g., meters) per second
+            static constexpr float BASE_WALK_SPEED_MPS = 3.0f;
+            static constexpr float SPRINT_SPEED_MULTIPLIER = 1.5f;
+            // static constexpr float PLAYER_MAX_TURN_RATE_DPS = 360.0f; // Degrees per second, if turn speed is capped
+
+            // Combat - Ability ID for cooldown map
+            // static constexpr uint32_t BASIC_ATTACK_ABILITY_ID = 2; // Example, ensure unique & consistent with ActivePlayer constants
         };
 
-    }
-} // namespace RiftForged::Gameplay
+    } // namespace Gameplay
+} // namespace RiftForged

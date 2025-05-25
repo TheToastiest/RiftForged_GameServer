@@ -6,13 +6,23 @@
 #include "../Gameplay/PlayerManager.h"
 #include <optional> // should be included in NetworkCommon.h if S2C_Response uses it, or here.
 
-// Forward declare PlayerManager and GameplayEngine
+// Forward declarations
 namespace RiftForged {
-    namespace GameLogic { class PlayerManager; }
-    namespace Gameplay { class GameplayEngine; }
+    namespace GameLogic {
+        class PlayerManager;    //
+        struct ActivePlayer;     // <<< ADDED: Forward declaration for ActivePlayer
+    }
+    namespace Gameplay {
+        class GameplayEngine;   //
+    }
+    namespace Networking {
+        namespace UDP {
+            namespace C2S {
+                struct C2S_MovementInputMsg; //
+            }
+        }
+    }
 }
-// Forward declare the FlatBuffer message type
-namespace RiftForged { namespace Networking { namespace UDP { namespace C2S { struct C2S_MovementInputMsg; } } } }
 
 namespace RiftForged {
     namespace Networking {
@@ -22,21 +32,23 @@ namespace RiftForged {
                 class MovementMessageHandler {
                 public:
                     MovementMessageHandler(
-                        RiftForged::GameLogic::PlayerManager& playerManager,
-                        RiftForged::Gameplay::GameplayEngine& gameplayEngine
+                        RiftForged::GameLogic::PlayerManager& playerManager,       //
+                        RiftForged::Gameplay::GameplayEngine& gameplayEngine     //
                     );
 
+                    // <<< MODIFIED Process method signature: Now takes ActivePlayer* >>>
                     std::optional<RiftForged::Networking::S2C_Response> Process(
                         const RiftForged::Networking::NetworkEndpoint& sender_endpoint,
+                        RiftForged::GameLogic::ActivePlayer* player, // <<< ADDED parameter
                         const RiftForged::Networking::UDP::C2S::C2S_MovementInputMsg* message
                     );
 
                 private:
-                    RiftForged::GameLogic::PlayerManager& m_playerManager;
-                    RiftForged::Gameplay::GameplayEngine& m_gameplayEngine;
+                    RiftForged::GameLogic::PlayerManager& m_playerManager;    //
+                    RiftForged::Gameplay::GameplayEngine& m_gameplayEngine;  //
                 };
 
-            }
-        }
-    }
-}
+            } // namespace C2S
+        } // namespace UDP
+    } // namespace Networking
+} // namespace RiftForged

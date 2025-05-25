@@ -32,6 +32,10 @@ struct C2S_RiftStepActivationMsg;
 struct C2S_RiftStepActivationMsgBuilder;
 struct C2S_RiftStepActivationMsgT;
 
+struct C2S_BasicAttackIntentMsg;
+struct C2S_BasicAttackIntentMsgBuilder;
+struct C2S_BasicAttackIntentMsgT;
+
 struct C2S_UseAbilityMsg;
 struct C2S_UseAbilityMsgBuilder;
 struct C2S_UseAbilityMsgT;
@@ -88,18 +92,20 @@ enum C2S_UDP_Payload : uint8_t {
   C2S_UDP_Payload_MovementInput = 1,
   C2S_UDP_Payload_TurnIntent = 2,
   C2S_UDP_Payload_RiftStepActivation = 3,
-  C2S_UDP_Payload_UseAbility = 4,
-  C2S_UDP_Payload_Ping = 5,
+  C2S_UDP_Payload_BasicAttackIntent = 4,
+  C2S_UDP_Payload_UseAbility = 5,
+  C2S_UDP_Payload_Ping = 6,
   C2S_UDP_Payload_MIN = C2S_UDP_Payload_NONE,
   C2S_UDP_Payload_MAX = C2S_UDP_Payload_Ping
 };
 
-inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[6] {
+inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[7] {
   static const C2S_UDP_Payload values[] = {
     C2S_UDP_Payload_NONE,
     C2S_UDP_Payload_MovementInput,
     C2S_UDP_Payload_TurnIntent,
     C2S_UDP_Payload_RiftStepActivation,
+    C2S_UDP_Payload_BasicAttackIntent,
     C2S_UDP_Payload_UseAbility,
     C2S_UDP_Payload_Ping
   };
@@ -107,11 +113,12 @@ inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[6] {
 }
 
 inline const char * const *EnumNamesC2S_UDP_Payload() {
-  static const char * const names[7] = {
+  static const char * const names[8] = {
     "NONE",
     "MovementInput",
     "TurnIntent",
     "RiftStepActivation",
+    "BasicAttackIntent",
     "UseAbility",
     "Ping",
     nullptr
@@ -141,6 +148,10 @@ template<> struct C2S_UDP_PayloadTraits<RiftForged::Networking::UDP::C2S::C2S_Ri
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_RiftStepActivation;
 };
 
+template<> struct C2S_UDP_PayloadTraits<RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsg> {
+  static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_BasicAttackIntent;
+};
+
 template<> struct C2S_UDP_PayloadTraits<RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsg> {
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_UseAbility;
 };
@@ -163,6 +174,10 @@ template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C
 
 template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT> {
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_RiftStepActivation;
+};
+
+template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT> {
+  static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_BasicAttackIntent;
 };
 
 template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsgT> {
@@ -226,6 +241,14 @@ struct C2S_UDP_PayloadUnion {
   const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT *AsRiftStepActivation() const {
     return type == C2S_UDP_Payload_RiftStepActivation ?
       reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT *>(value) : nullptr;
+  }
+  RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT *AsBasicAttackIntent() {
+    return type == C2S_UDP_Payload_BasicAttackIntent ?
+      reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT *>(value) : nullptr;
+  }
+  const RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT *AsBasicAttackIntent() const {
+    return type == C2S_UDP_Payload_BasicAttackIntent ?
+      reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT *>(value) : nullptr;
   }
   RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsgT *AsUseAbility() {
     return type == C2S_UDP_Payload_UseAbility ?
@@ -453,6 +476,85 @@ inline ::flatbuffers::Offset<C2S_RiftStepActivationMsg> CreateC2S_RiftStepActiva
 
 ::flatbuffers::Offset<C2S_RiftStepActivationMsg> CreateC2S_RiftStepActivationMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_RiftStepActivationMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct C2S_BasicAttackIntentMsgT : public ::flatbuffers::NativeTable {
+  typedef C2S_BasicAttackIntentMsg TableType;
+  uint64_t client_timestamp_ms = 0;
+  std::unique_ptr<RiftForged::Networking::Shared::Vec3> aim_direction{};
+  uint64_t target_entity_id = 0;
+  C2S_BasicAttackIntentMsgT() = default;
+  C2S_BasicAttackIntentMsgT(const C2S_BasicAttackIntentMsgT &o);
+  C2S_BasicAttackIntentMsgT(C2S_BasicAttackIntentMsgT&&) FLATBUFFERS_NOEXCEPT = default;
+  C2S_BasicAttackIntentMsgT &operator=(C2S_BasicAttackIntentMsgT o) FLATBUFFERS_NOEXCEPT;
+};
+
+struct C2S_BasicAttackIntentMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef C2S_BasicAttackIntentMsgT NativeTableType;
+  typedef C2S_BasicAttackIntentMsgBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_CLIENT_TIMESTAMP_MS = 4,
+    VT_AIM_DIRECTION = 6,
+    VT_TARGET_ENTITY_ID = 8
+  };
+  uint64_t client_timestamp_ms() const {
+    return GetField<uint64_t>(VT_CLIENT_TIMESTAMP_MS, 0);
+  }
+  const RiftForged::Networking::Shared::Vec3 *aim_direction() const {
+    return GetStruct<const RiftForged::Networking::Shared::Vec3 *>(VT_AIM_DIRECTION);
+  }
+  uint64_t target_entity_id() const {
+    return GetField<uint64_t>(VT_TARGET_ENTITY_ID, 0);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_CLIENT_TIMESTAMP_MS, 8) &&
+           VerifyFieldRequired<RiftForged::Networking::Shared::Vec3>(verifier, VT_AIM_DIRECTION, 4) &&
+           VerifyField<uint64_t>(verifier, VT_TARGET_ENTITY_ID, 8) &&
+           verifier.EndTable();
+  }
+  C2S_BasicAttackIntentMsgT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(C2S_BasicAttackIntentMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<C2S_BasicAttackIntentMsg> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_BasicAttackIntentMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct C2S_BasicAttackIntentMsgBuilder {
+  typedef C2S_BasicAttackIntentMsg Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_client_timestamp_ms(uint64_t client_timestamp_ms) {
+    fbb_.AddElement<uint64_t>(C2S_BasicAttackIntentMsg::VT_CLIENT_TIMESTAMP_MS, client_timestamp_ms, 0);
+  }
+  void add_aim_direction(const RiftForged::Networking::Shared::Vec3 *aim_direction) {
+    fbb_.AddStruct(C2S_BasicAttackIntentMsg::VT_AIM_DIRECTION, aim_direction);
+  }
+  void add_target_entity_id(uint64_t target_entity_id) {
+    fbb_.AddElement<uint64_t>(C2S_BasicAttackIntentMsg::VT_TARGET_ENTITY_ID, target_entity_id, 0);
+  }
+  explicit C2S_BasicAttackIntentMsgBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<C2S_BasicAttackIntentMsg> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<C2S_BasicAttackIntentMsg>(end);
+    fbb_.Required(o, C2S_BasicAttackIntentMsg::VT_AIM_DIRECTION);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<C2S_BasicAttackIntentMsg> CreateC2S_BasicAttackIntentMsg(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t client_timestamp_ms = 0,
+    const RiftForged::Networking::Shared::Vec3 *aim_direction = nullptr,
+    uint64_t target_entity_id = 0) {
+  C2S_BasicAttackIntentMsgBuilder builder_(_fbb);
+  builder_.add_target_entity_id(target_entity_id);
+  builder_.add_client_timestamp_ms(client_timestamp_ms);
+  builder_.add_aim_direction(aim_direction);
+  return builder_.Finish();
+}
+
+::flatbuffers::Offset<C2S_BasicAttackIntentMsg> CreateC2S_BasicAttackIntentMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_BasicAttackIntentMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct C2S_UseAbilityMsgT : public ::flatbuffers::NativeTable {
   typedef C2S_UseAbilityMsg TableType;
   uint64_t client_timestamp_ms = 0;
@@ -622,6 +724,9 @@ struct Root_C2S_UDP_Message FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Tab
   const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *payload_as_RiftStepActivation() const {
     return payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_RiftStepActivation ? static_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *>(payload()) : nullptr;
   }
+  const RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsg *payload_as_BasicAttackIntent() const {
+    return payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_BasicAttackIntent ? static_cast<const RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsg *>(payload()) : nullptr;
+  }
   const RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsg *payload_as_UseAbility() const {
     return payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_UseAbility ? static_cast<const RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsg *>(payload()) : nullptr;
   }
@@ -650,6 +755,10 @@ template<> inline const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg *Roo
 
 template<> inline const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *Root_C2S_UDP_Message::payload_as<RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg>() const {
   return payload_as_RiftStepActivation();
+}
+
+template<> inline const RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsg *Root_C2S_UDP_Message::payload_as<RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsg>() const {
+  return payload_as_BasicAttackIntent();
 }
 
 template<> inline const RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsg *Root_C2S_UDP_Message::payload_as<RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsg>() const {
@@ -797,6 +906,51 @@ inline ::flatbuffers::Offset<C2S_RiftStepActivationMsg> CreateC2S_RiftStepActiva
       _directional_intent);
 }
 
+inline C2S_BasicAttackIntentMsgT::C2S_BasicAttackIntentMsgT(const C2S_BasicAttackIntentMsgT &o)
+      : client_timestamp_ms(o.client_timestamp_ms),
+        aim_direction((o.aim_direction) ? new RiftForged::Networking::Shared::Vec3(*o.aim_direction) : nullptr),
+        target_entity_id(o.target_entity_id) {
+}
+
+inline C2S_BasicAttackIntentMsgT &C2S_BasicAttackIntentMsgT::operator=(C2S_BasicAttackIntentMsgT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(client_timestamp_ms, o.client_timestamp_ms);
+  std::swap(aim_direction, o.aim_direction);
+  std::swap(target_entity_id, o.target_entity_id);
+  return *this;
+}
+
+inline C2S_BasicAttackIntentMsgT *C2S_BasicAttackIntentMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<C2S_BasicAttackIntentMsgT>(new C2S_BasicAttackIntentMsgT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void C2S_BasicAttackIntentMsg::UnPackTo(C2S_BasicAttackIntentMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = client_timestamp_ms(); _o->client_timestamp_ms = _e; }
+  { auto _e = aim_direction(); if (_e) _o->aim_direction = std::unique_ptr<RiftForged::Networking::Shared::Vec3>(new RiftForged::Networking::Shared::Vec3(*_e)); }
+  { auto _e = target_entity_id(); _o->target_entity_id = _e; }
+}
+
+inline ::flatbuffers::Offset<C2S_BasicAttackIntentMsg> C2S_BasicAttackIntentMsg::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_BasicAttackIntentMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateC2S_BasicAttackIntentMsg(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<C2S_BasicAttackIntentMsg> CreateC2S_BasicAttackIntentMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_BasicAttackIntentMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const C2S_BasicAttackIntentMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _client_timestamp_ms = _o->client_timestamp_ms;
+  auto _aim_direction = _o->aim_direction ? _o->aim_direction.get() : nullptr;
+  auto _target_entity_id = _o->target_entity_id;
+  return RiftForged::Networking::UDP::C2S::CreateC2S_BasicAttackIntentMsg(
+      _fbb,
+      _client_timestamp_ms,
+      _aim_direction,
+      _target_entity_id);
+}
+
 inline C2S_UseAbilityMsgT::C2S_UseAbilityMsgT(const C2S_UseAbilityMsgT &o)
       : client_timestamp_ms(o.client_timestamp_ms),
         ability_id(o.ability_id),
@@ -919,6 +1073,10 @@ inline bool VerifyC2S_UDP_Payload(::flatbuffers::Verifier &verifier, const void 
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *>(obj);
       return verifier.VerifyTable(ptr);
     }
+    case C2S_UDP_Payload_BasicAttackIntent: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsg *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
     case C2S_UDP_Payload_UseAbility: {
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsg *>(obj);
       return verifier.VerifyTable(ptr);
@@ -958,6 +1116,10 @@ inline void *C2S_UDP_PayloadUnion::UnPack(const void *obj, C2S_UDP_Payload type,
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsg *>(obj);
       return ptr->UnPack(resolver);
     }
+    case C2S_UDP_Payload_BasicAttackIntent: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsg *>(obj);
+      return ptr->UnPack(resolver);
+    }
     case C2S_UDP_Payload_UseAbility: {
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsg *>(obj);
       return ptr->UnPack(resolver);
@@ -985,6 +1147,10 @@ inline ::flatbuffers::Offset<void> C2S_UDP_PayloadUnion::Pack(::flatbuffers::Fla
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT *>(value);
       return CreateC2S_RiftStepActivationMsg(_fbb, ptr, _rehasher).Union();
     }
+    case C2S_UDP_Payload_BasicAttackIntent: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT *>(value);
+      return CreateC2S_BasicAttackIntentMsg(_fbb, ptr, _rehasher).Union();
+    }
     case C2S_UDP_Payload_UseAbility: {
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsgT *>(value);
       return CreateC2S_UseAbilityMsg(_fbb, ptr, _rehasher).Union();
@@ -1009,6 +1175,10 @@ inline C2S_UDP_PayloadUnion::C2S_UDP_PayloadUnion(const C2S_UDP_PayloadUnion &u)
     }
     case C2S_UDP_Payload_RiftStepActivation: {
       value = new RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT(*reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT *>(u.value));
+      break;
+    }
+    case C2S_UDP_Payload_BasicAttackIntent: {
+      value = new RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT(*reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT *>(u.value));
       break;
     }
     case C2S_UDP_Payload_UseAbility: {
@@ -1038,6 +1208,11 @@ inline void C2S_UDP_PayloadUnion::Reset() {
     }
     case C2S_UDP_Payload_RiftStepActivation: {
       auto ptr = reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_RiftStepActivationMsgT *>(value);
+      delete ptr;
+      break;
+    }
+    case C2S_UDP_Payload_BasicAttackIntent: {
+      auto ptr = reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_BasicAttackIntentMsgT *>(value);
       delete ptr;
       break;
     }

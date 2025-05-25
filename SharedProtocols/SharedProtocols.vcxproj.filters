@@ -21,9 +21,6 @@
     <ClInclude Include="RiftForgedProtocols.h">
       <Filter>Source Files\RiftForgedProtocols</Filter>
     </ClInclude>
-    <ClInclude Include="Generated\riftforged_common_types_generated.h">
-      <Filter>Generated</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Schemas\riftforged_C2S_udp_messages.fbs">
@@ -35,7 +32,13 @@
     <None Include="Schemas\riftforged_S2C_udp_messages.fbs">
       <Filter>Schemas</Filter>
     </None>
-    <None Include="Schemas\riftforged_tcp_messages.fbs">
+    <None Include="Schemas\riftforged_S2C_tcp_messages.fbs">
+      <Filter>Schemas</Filter>
+    </None>
+    <None Include="Schemas\riftforged_item_definitions.fbs">
+      <Filter>Schemas</Filter>
+    </None>
+    <None Include="RiftForged_C2S_tcp_messages.fbs">
       <Filter>Schemas</Filter>
     </None>
   </ItemGroup>

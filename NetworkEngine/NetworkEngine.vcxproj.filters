@@ -65,9 +65,6 @@
     <Filter Include="PacketManagement\Handlers_C2S">
       <UniqueIdentifier>{ccf6898c-c4c9-497f-b7be-06c6405dbbd8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="PacketManagement\Dispatch\MessageDispatcher">
-      <UniqueIdentifier>{ba183a44-09de-46c1-9d30-b6fb15f2ede1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="PacketManagement\Handlers_C2S\MovementMessageHandler">
       <UniqueIdentifier>{39406eaa-be6d-4cb5-a6f2-93c616e151c5}</UniqueIdentifier>
     </Filter>
@@ -116,6 +113,12 @@
     </Filter>
     <Filter Include="PacketManagement\Handlers_C2S\TurnMessageHandler">
       <UniqueIdentifier>{674862ad-e826-4bb4-bd38-4a24b729cfb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PacketManagement\Handlers_C2S\BasicAttackMessageHandler">
+      <UniqueIdentifier>{c0f549d6-407c-4cf6-a98f-7e7635dd0fc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PacketManagement\Dispatch\MessageDispatcher">
+      <UniqueIdentifier>{ba183a44-09de-46c1-9d30-b6fb15f2ede1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -173,6 +176,9 @@
     <ClInclude Include="TurnMessageHandler.h">
       <Filter>PacketManagement\Handlers_C2S\TurnMessageHandler</Filter>
     </ClInclude>
+    <ClInclude Include="BasicAttackMessageHandler.h">
+      <Filter>PacketManagement\Handlers_C2S\BasicAttackMessageHandler</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -216,6 +222,9 @@
     </ClCompile>
     <ClCompile Include="TurnMessageHandler.cpp">
       <Filter>PacketManagement\Handlers_C2S\TurnMessageHandler</Filter>
+    </ClCompile>
+    <ClCompile Include="BasicAttackMessageHandler.cpp">
+      <Filter>PacketManagement\Handlers_C2S\BasicAttackMessageHandler</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

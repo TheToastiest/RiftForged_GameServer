@@ -1,0 +1,154 @@
+﻿// File: Schemas/riftforged_item_definitions.fbs
+// Protocol Version: 0.0.3 (aligning with common_types)
+// Description: Defines the static data structures for all items in RiftForged.
+// This file is part of Riftforged.
+// Copyright (C) 2023-2025 Riftforged
+
+include "riftforged_common_types.fbs"; // For Shared.DamageType, Shared.StatusEffectCategory etc.
+
+namespace RiftForged.Networking.Shared.Items; // New sub-namespace for clarity
+
+// --- Item Enumerations (Mirrors C++ EItemType) ---
+enum ItemType : ushort {
+    NONE = 0,
+    CURRENCY_SHIMMER, // CURRENCY_SHIMMER_CRYPTOCURRENCY
+    WEAPON_SWORD, WEAPON_AXE, WEAPON_MAUL, WEAPON_BOW, WEAPON_GUN_1H, WEAPON_GUN_2H, WEAPON_WAND, WEAPON_STAFF,
+    ARMOR_HEAD_LIGHT, ARMOR_HEAD_MEDIUM, ARMOR_HEAD_HEAVY,
+    ARMOR_CHEST_LIGHT, ARMOR_CHEST_MEDIUM, ARMOR_CHEST_HEAVY,
+    ARMOR_HANDS_LIGHT, ARMOR_HANDS_MEDIUM, ARMOR_HANDS_HEAVY,
+    ARMOR_FEET_LIGHT, ARMOR_FEET_MEDIUM, ARMOR_FEET_HEAVY,
+    ARMOR_BELT_LIGHT, ARMOR_BELT_MEDIUM, ARMOR_BELT_HEAVY,
+    ARMOR_SHIELD_LIGHT, ARMOR_SHIELD_HEAVY,
+    ACCESSORY_AMULET, ACCESSORY_RING, // Kept as placeholders, can be commented out if not used in data yet
+    CONSUMABLE_POTION, CONSUMABLE_ELIXIR, CONSUMABLE_FOOD, CONSUMABLE_RIFT_TONIC, CONSUMABLE_SCROLL,
+    MATERIAL_ELEMENTAL_AIR_SOLIDIFIED, MATERIAL_ELEMENTAL_WATER_SOLIDIFIED, MATERIAL_ELEMENTAL_FIRE_SOLIDIFIED, MATERIAL_ELEMENTAL_EARTH_SOLIDIFIED,
+    MATERIAL_METAL_BAR,
+    MATERIAL_WOOD, MATERIAL_LEATHER, MATERIAL_CLOTH,
+    MATERIAL_DUST_GILDING_EARLY_GAME, MATERIAL_DUST_GILDING_MID_GAME, MATERIAL_DUST_GILDING_LATE_GAME, MATERIAL_DUST_GILDING_END_GAME,
+    MATERIAL_ESSENCE_CLASS_CRAFTING_GENERAL_EARLY_GAME, MATERIAL_ESSENCE_CLASS_CRAFTING_GENERAL_MID_GAME, MATERIAL_ESSENCE_CLASS_CRAFTING_GENERAL_LATE_GAME, MATERIAL_ESSENCE_CLASS_CRAFTING_GENERAL_END_GAME,
+    MATERIAL_COMPONENT_GEM, MATERIAL_COMPONENT_SPECIAL,
+    ITEM_GILD_KIT_ELEMENTAL,
+    ITEM_STAR_MAP_POINT_UPGRADE,
+    TOKEN_CLASS_UNLOCK, TOKEN_FACTION_REPUTATION,
+    ITEM_QUEST, ITEM_KEY, ITEM_RECIPE, ITEM_JUNK
+}
+
+// Mirrors C++ EItemRarity
+enum ItemRarity : byte {
+    NORMAL = 0, SHARP, MAGIC, RARE, LEGENDARY, EPIC, MYTHIC, META
+}
+
+// Mirrors C++ EEquipmentSlot (accessories commented out as deferred)
+enum EquipmentSlot : byte {
+    NONE_SLOT = 0, // Renamed to avoid conflict if NONE is a keyword or common practice
+    HEAD, CHEST, HANDS, FEET, BELT,
+    MAIN_HAND, OFF_HAND
+    // AMULET, RING_1, RING_2 // Deferred
+}
+
+// Mirrors C++ EItemMaterialTier
+enum ItemMaterialTier : byte {
+    NONE_TIER = 0, // Renamed
+    TIER_0_BASE, TIER_1, TIER_2, TIER_3, TIER_4,
+    TIER_LEGENDARY_BASE, TIER_EPIC_BASE, TIER_MYTHIC_BASE,
+    TIER_ARTIFACT, TIER_TRANSCENDENT, TIER_META_BASE
+}
+
+// --- Type-Specific Property Tables (mirroring C++ structs) ---
+
+table WeaponStaticPropsTable {
+    base_physical_damage_min:float;
+    base_physical_damage_max:float;
+    attack_speed:float;
+    range_meters:float;
+    critical_hit_chance_base_percent:float;
+    critical_hit_damage_base_multiplier:float;
+    is_gildable:bool = true;
+}
+
+table ArmorStaticPropsTable {
+    base_defense:float;
+    will_regeneration_penalty_percent:float;
+    movement_speed_reduction_percent:float;
+    block_damage_reduction_percent:float;
+    block_stamina_cost:float;
+}
+
+enum ConsumableEffectType : byte {
+    NONE_EFFECT = 0, RESTORE_HEALTH, RESTORE_WILL, APPLY_STATUS_EFFECT
+}
+
+table ConsumableStaticPropsTable {
+    effect_type:ConsumableEffectType = NONE_EFFECT;
+    restore_amount_flat:float;
+    restore_amount_percent_max:float;
+    status_effect_to_apply:RiftForged.Networking.Shared.StatusEffectCategory = None; // From common_types
+    effect_duration_ms:uint;
+    usage_cooldown_sec:float;
+}
+
+enum GildTargetType : byte { WEAPON_TARGET = 0, ARMOR_TARGET } // Renamed to avoid conflict
+
+table GildKitStaticPropsTable {
+    element_type:RiftForged.Networking.Shared.DamageType = None; // From common_types
+    target_type:GildTargetType = WEAPON_TARGET;
+    gild_tier:ubyte;
+}
+
+table StarMapPointUpgradeStaticPropsTable {
+    points_granted:uint;
+}
+
+table ClassUnlockTokenStaticPropsTable {
+    unlocks_target_id:string;
+}
+
+// --- Union for Type-Specific Properties ---
+// This allows ItemStaticDataDefinition to hold properties for ONE specific item type.
+union ItemProperties {
+    WeaponStaticPropsTable,
+    ArmorStaticPropsTable,
+    ConsumableStaticPropsTable,
+    GildKitStaticPropsTable,
+    StarMapPointUpgradeStaticPropsTable,
+    ClassUnlockTokenStaticPropsTable
+    // AccessoryStaticPropsTable // When accessories are added
+}
+
+// --- Main Item Static Data Definition Table (mirrors C++ ItemStaticData) ---
+table ItemStaticDataDefinition {
+    // Common Properties
+    definition_id:uint (key); // Often good to mark the primary ID as a key
+    item_type:ItemType = NONE;
+    dev_name_tag:string;
+    display_name_sid:string;
+    description_sid:string;
+    rarity:ItemRarity = NORMAL;
+    max_stack_size:uint = 1;
+    is_unique:bool = false;
+    is_quest_item:bool = false;
+    can_be_sold_to_vendor:bool = true;
+    vendor_sell_price_shimmer:uint;
+    vendor_buy_price_shimmer:uint;
+    is_tradable:bool = true;
+    icon_resource_id:string;
+    model_resource_id:string;
+
+    // Equippable Properties
+    equip_slot:EquipmentSlot = NONE_SLOT;
+    required_level:uint = 1;
+
+    // Material Tier & Durability
+    material_tier:ItemMaterialTier = NONE_TIER;
+    base_durability:uint = 0; // Placeholder
+
+    // Type-Specific Properties (using the union)
+    properties:ItemProperties;
+}
+
+// Optional: A root table if you want this file to represent a list of item definitions.
+// This is useful if you're loading all item definitions from a single binary FlatBuffer file.
+table ItemDefinitionCollection {
+    definitions:[ItemStaticDataDefinition];
+}
+root_type ItemDefinitionCollection; // Or ItemStaticDataDefinition if a file contains only one.

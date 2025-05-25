@@ -130,14 +130,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Generated\riftforged_common_types_generated.h" />
     <ClInclude Include="RiftForgedProtocols.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="RiftForged_C2S_tcp_messages.fbs" />
     <None Include="Schemas\riftforged_C2S_udp_messages.fbs" />
     <None Include="Schemas\riftforged_common_types.fbs" />
+    <None Include="Schemas\riftforged_item_definitions.fbs" />
     <None Include="Schemas\riftforged_S2C_udp_messages.fbs" />
-    <None Include="Schemas\riftforged_tcp_messages.fbs" />
+    <None Include="Schemas\riftforged_S2C_tcp_messages.fbs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

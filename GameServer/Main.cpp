@@ -1,109 +1,162 @@
-﻿// In UDPServerApp.cpp or main.cpp
-// ... (includes for other components) ...
-#include "GameServerEngine.h" // Include the new engine
-#include "../NetworkEngine/UDPSocketAsync.h" // Include the UDPSocketAsync header
-#include "../NetworkEngine/PacketProcessor.h" // Include the PacketProcessor header
+﻿// RiftForged_GameServer/GameServer/Main.cpp
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <atomic>
+#include <chrono> // Required for std::chrono::milliseconds
+
+// Core Engine Components
+#include "GameServerEngine.h" 
+
+// Gameplay Components
+#include "../Gameplay/PlayerManager.h"    // Ensure this path is correct
+#include "../Gameplay/GameplayEngine.h"   // Ensure this path is correct
+
+// Physics Engine
+#include "../PhysicsEngine/PhysicsEngine.h" // Added for PhysicsEngine
+
+// Networking Components
+#include "../NetworkEngine/UDPSocketAsync.h"
+#include "../NetworkEngine/PacketProcessor.h"
+#include "../NetworkEngine/MessageDispatcher.h"
 #include "../NetworkEngine/MovementMessageHandler.h"
 #include "../NetworkEngine/RiftStepMessageHandler.h"
 #include "../NetworkEngine/AbilityMessageHandler.h"
-#include "../NetworkEngine/MessageDispatcher.h"
 #include "../NetworkEngine/PingMessageHandler.h"
-#include "../NetworkEngine/TurnMessageHandler.h" // Include the TurnMessageHandler header
-#include "Gameplay/PlayerManager.h"
-#include "Gameplay/GameplayEngine.h"
+#include "../NetworkEngine/TurnMessageHandler.h"
+#include "../NetworkEngine/BasicAttackMessageHandler.h"
+
+// Utilities
 #include "../Utils/Logger.h"
 
-std::atomic<bool> m_isSimulating = false; // Global atomic flag for simulation state
+// Global atomic flag (Consider if GameServerEngine should manage its own running state)
+std::atomic<bool> g_isServerRunning = true;
 
 int main() {
-    std::cout << "RiftForged UDPServer (GameServerEngine) Starting..." << std::endl;
-    RiftForged::Utilities::Logger::Init(/*spdlog::level::info, spdlog::level::trace, "logs/riftforged_server.log"*/); // Call once at start
+    std::cout << "RiftForged GameServer Starting..." << std::endl;
+    RiftForged::Utilities::Logger::Init();
+    RF_CORE_INFO("Logger Initialized.");
 
-    // 1. Instantiate Core Game Logic and Player Management
+    // --- 1. Instantiate Core Managers and Engines ---
+    RF_CORE_INFO("Instantiating core managers and engines...");
     RiftForged::GameLogic::PlayerManager playerManager;
-    RiftForged::Gameplay::GameplayEngine gameplayEngine; // For later
+    RF_CORE_INFO("PlayerManager created.");
 
-    // 2. Instantiate Message Handlers
+    RiftForged::Physics::PhysicsEngine physicsEngine; // Create PhysicsEngine
+    if (!physicsEngine.Initialize()) {                // Initialize PhysicsEngine
+        RF_CORE_CRITICAL("MAIN: Failed to initialize PhysicsEngine. Exiting.");
+        RiftForged::Utilities::Logger::Shutdown();
+        return -1;
+    }
+    RF_CORE_INFO("PhysicsEngine initialized.");
+
+    // GameplayEngine requires PlayerManager and PhysicsEngine
+    // This assumes your GameplayEngine.h and .cpp are updated for this constructor
+    RiftForged::Gameplay::GameplayEngine gameplayEngine(playerManager, physicsEngine);
+    RF_CORE_INFO("GameplayEngine created.");
+
+    // --- 2. Instantiate Message Handlers ---
+    RF_CORE_INFO("Instantiating message handlers...");
+    // Ensure constructors of these handlers match what they are passed
     RiftForged::Networking::UDP::C2S::MovementMessageHandler movementHandler(playerManager, gameplayEngine);
     RiftForged::Networking::UDP::C2S::RiftStepMessageHandler riftStepHandler(playerManager, gameplayEngine);
-    RiftForged::Networking::UDP::C2S::AbilityMessageHandler abilityHandler(playerManager);
+    RiftForged::Networking::UDP::C2S::AbilityMessageHandler abilityHandler(playerManager, gameplayEngine);
     RiftForged::Networking::UDP::C2S::PingMessageHandler pingHandler(playerManager);
-	RiftForged::Networking::UDP::C2S::TurnMessageHandler turnHandler(playerManager, gameplayEngine);
+    RiftForged::Networking::UDP::C2S::TurnMessageHandler turnHandler(playerManager, gameplayEngine);
+    RiftForged::Networking::UDP::C2S::BasicAttackMessageHandler basicAttackHandler(playerManager, gameplayEngine);
+    RF_CORE_INFO("Message handlers created.");
 
-    // 3. Instantiate MessageDispatcher
+    // --- 3. Instantiate MessageDispatcher ---
     RiftForged::Networking::MessageDispatcher messageDispatcher(
-        movementHandler, riftStepHandler, abilityHandler, pingHandler, turnHandler);
-    std::cout << "MessageDispatcher created." << std::endl;
+        movementHandler, riftStepHandler, abilityHandler, pingHandler, turnHandler, basicAttackHandler);
+    RF_CORE_INFO("MessageDispatcher created.");
 
-    // 4. Instantiate PacketProcessor
-    RiftForged::Networking::PacketProcessor packetProcessor(messageDispatcher);
-    std::cout << "PacketProcessor created." << std::endl;
+    // --- 4. Instantiate PacketProcessor ---
+    RiftForged::Networking::PacketProcessor packetProcessor(messageDispatcher, gameplayEngine);
+    RF_CORE_INFO("PacketProcessor created.");
 
-    // 5. Instantiate UDPSocketAsync
+    // --- 5. Instantiate UDPSocketAsync ---
     RiftForged::Networking::UDPSocketAsync udpSocket(playerManager, packetProcessor, "0.0.0.0", 12345);
-    std::cout << "UDPSocketAsync object created." << std::endl;
+    RF_CORE_INFO("UDPSocketAsync object created.");
 
-    // 6. Instantiate GameServerEngine
-    RiftForged::Server::GameServerEngine gameServerEngine(playerManager, udpSocket);
-    std::cout << "GameServerEngine object created." << std::endl;
+    // --- 6. Instantiate GameServerEngine ---
+    // This now matches the constructor in your current GameServerEngine.h
+    RiftForged::Server::GameServerEngine gameServerEngine(
+        playerManager,
+        gameplayEngine, // Pass the created GameplayEngine
+        udpSocket,
+        physicsEngine   // Pass the created PhysicsEngine
+        // Uses the default tickInterval from GameServerEngine.h (8ms)
+    );
+    RF_CORE_INFO("GameServerEngine object created.");
 
-    // 7. Initialize Network Layer
+    // --- 7. Initialize Network Layer ---
     if (!udpSocket.Init()) {
-        std::cerr << "MAIN: Failed to initialize UDPSocketAsync. Exiting." << std::endl;
+        RF_CORE_CRITICAL("MAIN: Failed to initialize UDPSocketAsync. Exiting.");
+        physicsEngine.Shutdown();
+        RiftForged::Utilities::Logger::Shutdown();
         return -1;
     }
-    std::cout << "MAIN: UDPSocketAsync initialized." << std::endl;
+    RF_CORE_INFO("MAIN: UDPSocketAsync initialized.");
 
-    // 8. Start Network Layer
+    // --- 8. Start Network Layer ---
     if (!udpSocket.Start()) {
-        std::cerr << "MAIN: Failed to start UDPSocketAsync. Exiting." << std::endl;
+        RF_CORE_CRITICAL("MAIN: Failed to start UDPSocketAsync. Exiting.");
         udpSocket.Stop();
+        physicsEngine.Shutdown();
+        RiftForged::Utilities::Logger::Shutdown();
         return -1;
     }
-    std::cout << "MAIN: UDPSocketAsync started." << std::endl;
+    RF_CORE_INFO("MAIN: UDPSocketAsync started.");
 
-    // 9. Start the GameServerEngine's Simulation Loop
+    // --- 9. Start the GameServerEngine's Simulation Loop ---
     gameServerEngine.StartSimulationLoop();
-    std::cout << "MAIN: GameServerEngine simulation loop started. Server is running." << std::endl;
-    std::cout << "Type 'q' and press Enter to stop the server." << std::endl;
+    RF_CORE_INFO("MAIN: GameServerEngine simulation loop started. Server is running.");
+    std::cout << "Type 'q' or 'quit' and press Enter to stop the server." << std::endl;
 
-    // 10. Main application loop - waits for 'q' input in this main thread
+    // --- 10. Main application loop ---
     std::string input_line;
-    while (true) {
-        std::cout << "> " << std::flush;
-        if (!std::getline(std::cin, input_line)) {
-            // EOF or error on std::cin
-            std::cout << "MAIN: std::cin error or EOF. Initiating shutdown." << std::endl;
-            break;
-        }
-        if (input_line == "q" || input_line == "quit") {
-            std::cout << "MAIN: Shutdown command received." << std::endl;
-            break;
-        }
-        else if (input_line.rfind("broadcast ", 0) == 0) {
-            if (input_line.length() > 10) {
-                std::string message_to_broadcast = input_line.substr(10);
-                std::cout << "MAIN: Broadcast requested: " << message_to_broadcast << std::endl;
-                // TODO: Implement a thread-safe way to pass this to GameServerEngine
-                // For example, GameServerEngine could have a method like:
-                // gameServerEngine.QueueSystemBroadcast(message_to_broadcast);
-                // Its SimulationTick would then pick this up and send it.
+    while (g_isServerRunning.load()) {
+        if (std::cin.rdbuf()->in_avail() > 0) {
+            if (!std::getline(std::cin, input_line)) {
+                RF_CORE_ERROR("MAIN: std::cin error or EOF. Initiating shutdown.");
+                g_isServerRunning.store(false);
+                break;
+            }
+            if (input_line == "q" || input_line == "quit") {
+                RF_CORE_INFO("MAIN: Shutdown command received via console.");
+                g_isServerRunning.store(false);
+                break;
+            }
+            else if (input_line.rfind("broadcast ", 0) == 0) {
+                if (input_line.length() > 10) {
+                    std::string message_to_broadcast = input_line.substr(10);
+                    RF_CORE_INFO("MAIN: Broadcast requested via console: {}", message_to_broadcast);
+                    // TODO: gameServerEngine.QueueSystemBroadcast(message_to_broadcast);
+                }
+            }
+            else if (!input_line.empty()) {
+                RF_CORE_INFO("MAIN: Unknown command '{}'. Type 'q' or 'quit' to exit.", input_line);
             }
         }
-        else if (!input_line.empty()) {
-            std::cout << "MAIN: Unknown command '" << input_line << "'. Type 'q' or 'quit' to exit." << std::endl;
-        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     // --- Shutdown Sequence ---
-    std::cout << "MAIN: Shutdown sequence initiated..." << std::endl;
+    RF_CORE_INFO("MAIN: Shutdown sequence initiated...");
 
-    std::cout << "MAIN: Signaling GameServerEngine to stop..." << std::endl;
-    gameServerEngine.StopSimulationLoop(); // This will set its internal m_isSimulatingThread to false and join
+    RF_CORE_INFO("MAIN: Signaling GameServerEngine to stop...");
+    gameServerEngine.StopSimulationLoop(); // This should also call m_physicsEngine.Shutdown() internally
 
-    std::cout << "MAIN: Signaling UDPSocketAsync to stop..." << std::endl;
-    udpSocket.Stop(); // This will set its internal m_isRunning to false, post to IOCP, and join
-    RiftForged::Utilities::Logger::FlushAll(); // Optional, as shutdown flushes
+    RF_CORE_INFO("MAIN: Signaling UDPSocketAsync to stop...");
+    udpSocket.Stop();
+
+    // physicsEngine.Shutdown(); // Should be handled by GameServerEngine::StopSimulationLoop 
+                               // as GSE now holds a reference to it and your GSE.cpp calls Shutdown.
+
+    RF_CORE_INFO("MAIN: Flushing and shutting down logger...");
+    RiftForged::Utilities::Logger::FlushAll();
     RiftForged::Utilities::Logger::Shutdown();
     std::cout << "MAIN: Server shut down gracefully." << std::endl;
     return 0;
