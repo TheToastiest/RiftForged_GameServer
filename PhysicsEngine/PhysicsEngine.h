@@ -1,4 +1,4 @@
-﻿// File: PhysicsEngine/PhysicsEngine.h
+// File: PhysicsEngine/PhysicsEngine.h
 // Copyright (c) 2023-2025 RiftForged Game Development Team
 #pragma once
 
@@ -9,12 +9,14 @@
 #include "physx/characterkinematic/PxController.h"
 #include "physx/cooking/PxCooking.h"
 #include "physx/PxQueryFiltering.h"
+#include "physx/cudamanager/PxCudaContextManager.h"
 #include <map>
-#include <vector>
+#include <vector>   
 #include <string>
 #include <mutex>
 #include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"
 #include "../Utils/Logger.h"
+#include "../Utils/MathUtil.h"
 
 namespace physx {
     class PxShape;
@@ -42,6 +44,7 @@ namespace physx {
     class PxExtendedVector;
 	class PxControllerManager;
 	struct PxQueryFilterData;
+    class PxCudaContextManager;
 }
 
 namespace RiftForged {
@@ -98,6 +101,59 @@ namespace RiftForged {
             void SetCharacterControllerPose(physx::PxController* controller, const SharedVec3& world_position);
             SharedVec3 GetCharacterControllerPosition(physx::PxController* controller) const;
             void SetActorUserData(physx::PxActor* actor, void* userData);
+
+            // In PhysicsEngine.h, within the PhysicsEngine class declaration
+
+            // Helper struct to define the physical properties of a projectile
+            struct ProjectilePhysicsProperties {
+                float radius = 0.05f;
+                float halfHeight = 0.2f; // For capsule shape; set to 0 or equal to radius for sphere
+                float mass = 0.2f;
+                bool enableGravity = true;
+                bool enableCCD = false; // Continuous Collision Detection, for fast-moving small objects
+                // Add restitution, friction, damping if needed
+            };
+
+            // Helper struct to carry game-specific data for the projectile's PxActor userData
+            // This data is retrieved when the projectile collides with something.
+            struct ProjectileGameData {
+                uint64_t projectileId = 0;  // Unique ID for this projectile instance
+                uint64_t ownerId = 0;       // Entity ID of the character who fired it
+                RiftForged::Networking::Shared::DamageInstance damagePayload; // Damage to apply on hit
+                std::string vfxTag;         // Tag for client-side visual effects (trail, impact)
+                float maxRangeOrLifetime;   // Max travel distance (meters) or lifetime (seconds) for cleanup by a manager system
+
+                ProjectileGameData() = default;
+                ProjectileGameData(uint64_t pId, uint64_t oId,
+                    const RiftForged::Networking::Shared::DamageInstance& dmg,
+                    const std::string& vfx, float lifetime)
+                    : projectileId(pId), ownerId(oId), damagePayload(dmg), vfxTag(vfx), maxRangeOrLifetime(lifetime) {
+                }
+            };
+
+            /**
+             * @brief Creates a physics actor for a projectile and launches it into the scene.
+             * @param properties The physical properties of the projectile (shape, mass, gravity, CCD).
+             * @param gameData Game-specific data to be stored in the projectile's PxActor userData.
+             * IMPORTANT: A copy of this data will be heap-allocated. The system
+             * handling projectile collisions or cleanup (e.g., a ProjectileManager or
+             * your onContact callback handler) MUST delete this heap-allocated data
+             * when the projectile actor is destroyed to prevent memory leaks.
+             * @param startPosition World-space position where the projectile spawns.
+             * @param initialVelocity World-space initial velocity (direction * speed).
+             * @param material The PxMaterial for the projectile's shape (uses default if nullptr).
+             * @return Pointer to the created PxRigidDynamic, or nullptr on failure.
+             * The PhysicsEngine adds the actor to the scene but does not retain ownership beyond that.
+             * A dedicated ProjectileManager should track and manage active projectiles.
+             */
+            physx::PxRigidDynamic* CreatePhysicsProjectileActor(
+                const ProjectilePhysicsProperties& properties,
+                const ProjectileGameData& gameData, // This will be copied to the heap for userData
+                const RiftForged::Utilities::Math::Vec3& startPosition,
+                const RiftForged::Utilities::Math::Vec3& initialVelocity,
+                physx::PxMaterial* material = nullptr
+            );
+
 
             bool CapsuleSweepSingle(
                 const SharedVec3& start_pos,
@@ -158,11 +214,14 @@ namespace RiftForged {
             mutable std::mutex m_playerControllersMutex;
             std::map<uint64_t, physx::PxRigidActor*> m_entityActors;
             mutable std::mutex m_entityActorsMutex;
+			mutable std::mutex m_physicsMutex; // Protects access to physics-related data
             physx::PxPvd* m_pvd = nullptr;
             physx::PxPvdTransport* m_pvd_transport = nullptr;
 			physx::PxQueryFilterData m_default_filter_data; // Default filter data for queries
 
             void SetupShapeFiltering(physx::PxShape* shape, const CollisionFilterData& filter_data);
+
+            physx::PxCudaContextManager* m_cudaContextManager = nullptr;
         };
 
     } // namespace Physics
