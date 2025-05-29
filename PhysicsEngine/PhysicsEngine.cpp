@@ -491,7 +491,7 @@ namespace RiftForged {
                 return;
             }
 
-            std::lock_guard<std::mutex> lock(m_physicsMutex); // <<<< LOCK ADDED HERE
+            // std::lock_guard<std::mutex> lock(m_physicsMutex); // REMOVED HERE. ENSURE m_physicsMutex IS ALWAYS LOCKED WHEN CALLING SetActorUserData FUNCTION
             // Assuming the actor might be in the scene
 
         // It's good practice to also check if the actor is still in a scene,
