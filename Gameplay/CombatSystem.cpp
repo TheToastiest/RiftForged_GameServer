@@ -1,4 +1,8 @@
-﻿#include "CombatSystem.h"
+﻿// File: PhysicsEngine/PhysicsEngine.h
+// RiftForged Game Development Team
+// Copyright (c) 2025-2028 RiftForged Game Development Team
+
+#include "CombatSystem.h"
 #include "CombatData.h"
 #include "PlayerManager.h" // For ActivePlayer definition
 #include "../PhysicsEngine/PhysicsEngine.h"
