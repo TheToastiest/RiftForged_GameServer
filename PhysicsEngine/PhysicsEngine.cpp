@@ -1,5 +1,5 @@
 ﻿// File: PhysicsEngine/PhysicsEngine.cpp
-// Copyright (c) 2023-2025 RiftForged Game Development Team
+// Copyright (c) 2025-202* RiftForged Game Development Team
 
 #include "PhysicsEngine.h"
 #include <vector> 

@@ -1,5 +1,6 @@
 ﻿// File: PhysicsEngine/PhysicsEngine.h
-// Copyright (c) 2023-2025 RiftForged Game Development Team
+// RiftForged Game Development Team
+// Copyright (c) 2025-2028 RiftForged Game Development Team
 #pragma once
 
 #include "physx/PxPhysicsAPI.h"

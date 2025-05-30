@@ -1,6 +1,6 @@
 ﻿// File: PhysicsEngine/PhysicsTypes.h
 // RiftForged Game Development Team
-// Copyright (c) 2025-2028 RiftForged Game Development Team
+// Copyright (c) 2025-2028 RiftForged Game Development Team 
 #pragma once // If in a new header
 #include "physx/foundation/PxFlags.h" // For PxFlags    
 #include "physx/PxPhysics.h" // For PxU32, PxFilterData, etc.
