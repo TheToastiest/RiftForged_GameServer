@@ -11,6 +11,7 @@
 #include <atomic>
 #include <mutex>
 #include <deque>
+#include <map>
 #include <memory> // For std::unique_ptr
 //#include <functional> // Only if you decide to use std::function for callbacks later
 
@@ -29,10 +30,15 @@
 #include "NetworkCommon.h" // For S2C_Response (should include <optional>)
 #include "GamePacketHeader.h" // For GamePacketHeader
 #include "../Gameplay/PlayerManager.h" // For PlayerManager (if needed in this file)
+#include "UDPReliabilityProtocol.h"
 
 // Constants
 const int DEFAULT_UDP_BUFFER_SIZE_IOCP = 4096;
 const int MAX_PENDING_RECEIVES_IOCP = 200;
+const int RELIABILITY_THREAD_SLEEP_MS = 20; // Check for retransmissions/pending ACKs every 20ms
+const float DEFAULT_RTO_MS = 200.0f;        // Default Retransmission Timeout
+const int DEFAULT_MAX_RETRIES = 5;          // Default max retries for a reliable packet
+const int STALE_CONNECTION_TIMEOUT_SECONDS = 60; // Timeout for considering a connection stale (no packets received in this time)
 
 namespace RiftForged {
     namespace Networking {
@@ -87,7 +93,23 @@ namespace RiftForged {
             bool Init();
             bool Start();
             void Stop();
-            bool SendTo(const NetworkEndpoint& recipient, const char* data, int length);
+           
+            bool SendRawTo(const NetworkEndpoint& recipient, const char* data, int length);
+
+            // New method for sending data reliably
+            bool SendReliableTo(const NetworkEndpoint& recipient,
+                MessageType messageType,
+                const uint8_t* payloadData,
+                uint16_t payloadSize,
+                uint8_t additionalFlags = 0); // e.g., IS_HEARTBEAT
+
+            // Optional: A method for sending unreliable data directly if needed by application
+            bool SendUnreliableTo(const NetworkEndpoint& recipient,
+                MessageType messageType,
+                const uint8_t* payloadData,
+                uint16_t payloadSize,
+                uint8_t additionalFlags = 0);
+
 
             bool IsRunning() const;
 
@@ -96,6 +118,10 @@ namespace RiftForged {
             bool PostReceive(OverlappedIOContext* pRecvContext);
             OverlappedIOContext* GetFreeReceiveContext();
             void ReturnReceiveContext(OverlappedIOContext* pContext);
+
+            void ReliabilityManagementThread();
+            std::shared_ptr<ReliableConnectionState> GetOrCreateReliabilityState(const NetworkEndpoint& endpoint);
+
 
             RiftForged::GameLogic::PlayerManager& m_playerManager; // Added PlayerManager reference
             PacketProcessor& m_packetProcessor;
@@ -111,6 +137,13 @@ namespace RiftForged {
             std::vector<std::unique_ptr<OverlappedIOContext>> m_receiveContextPool;
             std::deque<OverlappedIOContext*> m_freeReceiveContexts;
             std::mutex m_receiveContextMutex;
+
+            std::map<NetworkEndpoint, std::shared_ptr<ReliableConnectionState>> m_reliabilityStates;
+            std::mutex m_reliabilityStatesMutex; // To protect access to m_reliabilityStates
+            std::thread m_reliabilityThread;    // Thread for managing retransmissions and pending ACKs
+
+            std::map<NetworkEndpoint, std::chrono::steady_clock::time_point> m_endpointLastSeenTime;
+
         };
 
     } // namespace Networking

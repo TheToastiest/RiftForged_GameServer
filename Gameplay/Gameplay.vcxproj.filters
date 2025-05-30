@@ -12,9 +12,6 @@
     <Filter Include="Entities\Player">
       <UniqueIdentifier>{33d5ddd6-3a88-4a5a-b8eb-f8df52db8cb4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Entities\Player\PlayerState">
-      <UniqueIdentifier>{bad075e8-4b61-4dda-9bb9-458a5047f096}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Entities\Player\PlayerManager">
       <UniqueIdentifier>{f75b87cf-b5a6-4ad7-8e3e-55864d2f731c}</UniqueIdentifier>
     </Filter>
@@ -81,9 +78,6 @@
     <Filter Include="Items">
       <UniqueIdentifier>{3da59086-cfe5-47e2-a793-1e7616b9d604}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Abilities\CombatLogic">
-      <UniqueIdentifier>{0d359ee0-d7b9-491b-a33b-a45eab7a4917}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Crafting">
       <UniqueIdentifier>{e05f38bf-2e8f-4fbd-85a8-c9c14833d58f}</UniqueIdentifier>
     </Filter>
@@ -106,17 +100,38 @@
     <Filter Include="Core\GameTypes">
       <UniqueIdentifier>{e1f0c52b-f78c-4aa9-aeb4-a60de41ac65c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="StarTreeSystem">
+    <Filter Include="World\WorldData">
+      <UniqueIdentifier>{ee3cc393-5685-4ee3-aca9-8e792274dccb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\Player\PlayerState">
+      <UniqueIdentifier>{bad075e8-4b61-4dda-9bb9-458a5047f096}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="World\RiftPoint">
+      <UniqueIdentifier>{a6b4034c-0eb3-42a5-a4ce-e65b7393cb81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="World\RiftPoint\RiftPointManager">
+      <UniqueIdentifier>{f6b6901c-9827-4e9a-b42b-97ae823fcdea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AscensionTreeSystem">
       <UniqueIdentifier>{cf7b0412-fdbe-4d21-8229-cea47c59eb10}</UniqueIdentifier>
     </Filter>
-    <Filter Include="StarTreeSystem\StarTreeSystem">
+    <Filter Include="AscensionTreeSystem\StarTreeSystem">
       <UniqueIdentifier>{ff57774a-3f8d-4d23-804b-934b9f35cd52}</UniqueIdentifier>
     </Filter>
-    <Filter Include="StarTreeSystem\StarTreeSystem\ActiveAbilityManager">
+    <Filter Include="AscensionTreeSystem\StarTreeSystem\ActiveAbilityManager">
       <UniqueIdentifier>{10df3475-c178-43e1-af28-2a2d65a9e833}</UniqueIdentifier>
     </Filter>
-    <Filter Include="StarTreeSystem\StarTreeSystem\PassiveAbilityManager">
+    <Filter Include="AscensionTreeSystem\StarTreeSystem\PassiveAbilityManager">
       <UniqueIdentifier>{967e6c1a-629a-4bcd-a1e1-a4d42ad614cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\BasicCombat">
+      <UniqueIdentifier>{bd898622-282f-46f1-b614-df6ba275acef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\BasicCombat\CombatData">
+      <UniqueIdentifier>{0d359ee0-d7b9-491b-a33b-a45eab7a4917}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Abilities\BasicCombat\CombatSystem">
+      <UniqueIdentifier>{a37e00cb-4b06-4366-81ad-607d92253d4f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -131,6 +146,12 @@
     </ClCompile>
     <ClCompile Include="AbilityLogic.h">
       <Filter>Abilities\AbilitySystem</Filter>
+    </ClCompile>
+    <ClCompile Include="RiftPointManager.cpp">
+      <Filter>World\RiftPoint\RiftPointManager</Filter>
+    </ClCompile>
+    <ClCompile Include="CombatSystem.cpp">
+      <Filter>Abilities\BasicCombat\CombatSystem</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -149,14 +170,23 @@
     <ClInclude Include="CraftingMaterials.h">
       <Filter>Crafting\CraftingSystem\Crafting Materials</Filter>
     </ClInclude>
-    <ClInclude Include="CombatLogic.h">
-      <Filter>Abilities\CombatLogic</Filter>
+    <ClInclude Include="CombatData.h">
+      <Filter>Abilities\BasicCombat\CombatData</Filter>
     </ClInclude>
     <ClInclude Include="ItemType.h">
       <Filter>Items</Filter>
     </ClInclude>
     <ClInclude Include="ItemStaticData.h">
       <Filter>Items</Filter>
+    </ClInclude>
+    <ClInclude Include="RiftPointManager.h">
+      <Filter>World\RiftPoint\RiftPointManager</Filter>
+    </ClInclude>
+    <ClInclude Include="CombatSystem.h">
+      <Filter>Abilities\BasicCombat\CombatSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="RiftPoint.h">
+      <Filter>World\RiftPoint\RiftPointManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

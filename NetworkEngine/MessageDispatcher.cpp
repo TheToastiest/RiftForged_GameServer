@@ -38,25 +38,25 @@ namespace RiftForged {
             UDP::C2S::AbilityMessageHandler& abilityHandler,
             UDP::C2S::PingMessageHandler& pingHandler,
             UDP::C2S::TurnMessageHandler& turnHandler, // Add new handler
-			UDP::C2S::BasicAttackMessageHandler& basicAttackHandler) // Added for BasicAttack
+            UDP::C2S::BasicAttackMessageHandler& basicAttackHandler) // Added for BasicAttack
             : m_movementHandler(movementHandler),
             m_riftStepHandler(riftStepHandler),
             m_abilityHandler(abilityHandler),
             m_pingHandler(pingHandler),
             m_turnHandler(turnHandler), // Initialize new handler
-			m_basicAttackHandler(basicAttackHandler) // Added for BasicAttack
+            m_basicAttackHandler(basicAttackHandler) // Added for BasicAttack
         {
             RF_NETWORK_INFO("MessageDispatcher: Initialized with all handlers.");
         }
 
-		// DispatchC2SMessage now takes an ActivePlayer* parameter
+        // DispatchC2SMessage now takes an ActivePlayer* parameter
         std::optional<S2C_Response> MessageDispatcher::DispatchC2SMessage(
             const GamePacketHeader& header,
             const uint8_t* flatbuffer_payload_ptr,
             int flatbuffer_payload_size,
             const NetworkEndpoint& sender_endpoint,
             RiftForged::GameLogic::ActivePlayer* player) { // <<< player pointer received
-                
+
             if (!player) {
                 RF_NETWORK_ERROR("MessageDispatcher: Null player object provided for dispatch from {}. MessageType: {}",
                     sender_endpoint.ToString(), static_cast<int>(header.messageType));

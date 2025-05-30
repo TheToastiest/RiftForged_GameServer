@@ -9,7 +9,7 @@
 #include <vector>   // For constructing send_buffer if done at a higher level
 #include <cstring>  // For memcpy if constructing send_buffer at a higher level
 
-namespace RiftForged {  
+namespace RiftForged {
     namespace Networking {
         namespace UDP {
             namespace C2S {

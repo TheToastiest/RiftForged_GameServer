@@ -75,6 +75,14 @@ namespace RiftForged {
 #define RF_CORE_ERROR(...)    if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->error(__VA_ARGS__); }
 #define RF_CORE_CRITICAL(...) if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->critical(__VA_ARGS__); }
 
+#define RF_COMBAT_TRACE(...)    if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->trace(__VA_ARGS__); }
+#define RF_COMBAT_DEBUG(...)    if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->debug(__VA_ARGS__); }
+#define RF_COMBAT_INFO(...)     if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->info(__VA_ARGS__); }
+#define RF_COMBAT_WARN(...)     if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->warn(__VA_ARGS__); }
+#define RF_COMBAT_ERROR(...)    if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->error(__VA_ARGS__); }
+#define RF_COMBAT_CRITICAL(...) if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->critical(__VA_ARGS__); }
+
+
 // Network Logger Macros
 #define RF_NETWORK_TRACE(...) if (RiftForged::Utilities::Logger::GetNetworkLogger()) { RiftForged::Utilities::Logger::GetNetworkLogger()->trace(__VA_ARGS__); }
 #define RF_NETWORK_DEBUG(...) if (RiftForged::Utilities::Logger::GetNetworkLogger()) { RiftForged::Utilities::Logger::GetNetworkLogger()->debug(__VA_ARGS__); }

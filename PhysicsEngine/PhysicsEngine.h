@@ -1,4 +1,4 @@
-// File: PhysicsEngine/PhysicsEngine.h
+﻿// File: PhysicsEngine/PhysicsEngine.h
 // Copyright (c) 2023-2025 RiftForged Game Development Team
 #pragma once
 
@@ -7,7 +7,7 @@
 #include "physx/foundation/PxMath.h"
 #include "physx/extensions/PxDefaultCpuDispatcher.h"
 #include "physx/characterkinematic/PxController.h"
-#include "physx/cooking/PxCooking.h"
+// #include "physx/cooking/PxCooking.h" // PxCooking object itself is not stored
 #include "physx/PxQueryFiltering.h"
 #include "physx/cudamanager/PxCudaContextManager.h"
 #include <map>
@@ -17,6 +17,7 @@
 #include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"
 #include "../Utils/Logger.h"
 #include "../Utils/MathUtil.h"
+#include "../PhysicsEngine/PhysicsTypes.h" // Ensure this path is correct
 
 namespace physx {
     class PxShape;
@@ -39,11 +40,8 @@ namespace physx {
     class PxTriangleMesh;
     class PxConvexMesh;
     class PxHeightField;
-    class PxCooking;
-    class PxController;
-    class PxExtendedVector;
-	class PxControllerManager;
-	struct PxQueryFilterData;
+    // class PxCooking; // Removed from members
+    struct PxQueryFilterData;
     class PxCudaContextManager;
 }
 
@@ -94,7 +92,6 @@ namespace RiftForged {
             void UnregisterPlayerController(uint64_t player_id);
             physx::PxController* GetPlayerController(uint64_t player_id) const;
 
-            // Sets the world orientation of the character controller's actor associated with player_id.
             bool SetCharacterControllerOrientation(uint64_t player_id, const SharedQuaternion& orientation);
 
             uint32_t MoveCharacterController(physx::PxController* controller, const SharedVec3& world_space_displacement, float delta_time_sec, const std::vector<physx::PxController*>& other_controllers_to_ignore = {});
@@ -102,26 +99,20 @@ namespace RiftForged {
             SharedVec3 GetCharacterControllerPosition(physx::PxController* controller) const;
             void SetActorUserData(physx::PxActor* actor, void* userData);
 
-            // In PhysicsEngine.h, within the PhysicsEngine class declaration
-
-            // Helper struct to define the physical properties of a projectile
             struct ProjectilePhysicsProperties {
                 float radius = 0.05f;
-                float halfHeight = 0.2f; // For capsule shape; set to 0 or equal to radius for sphere
+                float halfHeight = 0.2f;
                 float mass = 0.2f;
                 bool enableGravity = true;
-                bool enableCCD = false; // Continuous Collision Detection, for fast-moving small objects
-                // Add restitution, friction, damping if needed
+                bool enableCCD = false;
             };
 
-            // Helper struct to carry game-specific data for the projectile's PxActor userData
-            // This data is retrieved when the projectile collides with something.
             struct ProjectileGameData {
-                uint64_t projectileId = 0;  // Unique ID for this projectile instance
-                uint64_t ownerId = 0;       // Entity ID of the character who fired it
-                RiftForged::Networking::Shared::DamageInstance damagePayload; // Damage to apply on hit
-                std::string vfxTag;         // Tag for client-side visual effects (trail, impact)
-                float maxRangeOrLifetime;   // Max travel distance (meters) or lifetime (seconds) for cleanup by a manager system
+                uint64_t projectileId = 0;
+                uint64_t ownerId = 0;
+                RiftForged::Networking::Shared::DamageInstance damagePayload;
+                std::string vfxTag;
+                float maxRangeOrLifetime;
 
                 ProjectileGameData() = default;
                 ProjectileGameData(uint64_t pId, uint64_t oId,
@@ -131,24 +122,10 @@ namespace RiftForged {
                 }
             };
 
-            /**
-             * @brief Creates a physics actor for a projectile and launches it into the scene.
-             * @param properties The physical properties of the projectile (shape, mass, gravity, CCD).
-             * @param gameData Game-specific data to be stored in the projectile's PxActor userData.
-             * IMPORTANT: A copy of this data will be heap-allocated. The system
-             * handling projectile collisions or cleanup (e.g., a ProjectileManager or
-             * your onContact callback handler) MUST delete this heap-allocated data
-             * when the projectile actor is destroyed to prevent memory leaks.
-             * @param startPosition World-space position where the projectile spawns.
-             * @param initialVelocity World-space initial velocity (direction * speed).
-             * @param material The PxMaterial for the projectile's shape (uses default if nullptr).
-             * @return Pointer to the created PxRigidDynamic, or nullptr on failure.
-             * The PhysicsEngine adds the actor to the scene but does not retain ownership beyond that.
-             * A dedicated ProjectileManager should track and manage active projectiles.
-             */
             physx::PxRigidDynamic* CreatePhysicsProjectileActor(
                 const ProjectilePhysicsProperties& properties,
-                const ProjectileGameData& gameData, // This will be copied to the heap for userData
+                const ProjectileGameData& gameData,
+                EPhysicsObjectType projectile_type,
                 const RiftForged::Utilities::Math::Vec3& startPosition,
                 const RiftForged::Utilities::Math::Vec3& initialVelocity,
                 physx::PxMaterial* material = nullptr
@@ -170,15 +147,19 @@ namespace RiftForged {
                 physx::PxQueryFilterCallback* filter_callback = nullptr
             );
 
-            physx::PxRigidStatic* CreateStaticBox(uint64_t entity_id, const SharedVec3& position, const SharedQuaternion& orientation, const SharedVec3& half_extents, physx::PxMaterial* material = nullptr, const CollisionFilterData& filter_data = {}, void* user_data = nullptr);
-            physx::PxRigidStatic* CreateStaticSphere(uint64_t entity_id, const SharedVec3& position, float radius, physx::PxMaterial* material = nullptr, const CollisionFilterData& filter_data = {}, void* user_data = nullptr);
-            physx::PxRigidStatic* CreateStaticCapsule(uint64_t entity_id, const SharedVec3& position, const SharedQuaternion& orientation, float radius, float half_height, physx::PxMaterial* material = nullptr, const CollisionFilterData& filter_data = {}, void* user_data = nullptr);
-            physx::PxRigidStatic* CreateStaticPlane(const SharedVec3& normal, float distance, physx::PxMaterial* material = nullptr, const CollisionFilterData& filter_data = {});
-            physx::PxRigidStatic* CreateStaticTriangleMesh(uint64_t entity_id, const std::vector<SharedVec3>& vertices, const std::vector<uint32_t>& indices, const SharedVec3& scale = SharedVec3(1.0f, 1.0f, 1.0f), physx::PxMaterial* material = nullptr, const CollisionFilterData& filter_data = {}, void* user_data = nullptr);
+            physx::PxRigidStatic* CreateStaticBox(uint64_t entity_id, const SharedVec3& position, const SharedQuaternion& orientation, const SharedVec3& half_extents, EPhysicsObjectType object_type, physx::PxMaterial* material = nullptr, void* user_data = nullptr);
+            physx::PxRigidStatic* CreateStaticSphere(uint64_t entity_id, const SharedVec3& position, float radius, EPhysicsObjectType object_type, physx::PxMaterial* material = nullptr, void* user_data = nullptr);
+            physx::PxRigidStatic* CreateStaticCapsule(uint64_t entity_id, const SharedVec3& position, const SharedQuaternion& orientation, float radius, float half_height, EPhysicsObjectType object_type, physx::PxMaterial* material = nullptr, void* user_data = nullptr);
+            physx::PxRigidStatic* CreateStaticPlane(
+                const SharedVec3& normal,
+                float distance,
+                EPhysicsObjectType object_type,
+                physx::PxMaterial* material = nullptr);
+            physx::PxRigidStatic* CreateStaticTriangleMesh(uint64_t entity_id, const std::vector<SharedVec3>& vertices, const std::vector<uint32_t>& indices, EPhysicsObjectType object_type, const SharedVec3& scale_vec = SharedVec3(1.0f, 1.0f, 1.0f), physx::PxMaterial* material = nullptr, void* user_data = nullptr);
 
-            physx::PxRigidDynamic* CreateDynamicBox(uint64_t entity_id, const SharedVec3& position, const SharedQuaternion& orientation, const SharedVec3& half_extents, float density, physx::PxMaterial* material = nullptr, const CollisionFilterData& filter_data = {}, void* user_data = nullptr);
-            physx::PxRigidDynamic* CreateDynamicSphere(uint64_t entity_id, const SharedVec3& position, float radius, float density, physx::PxMaterial* material = nullptr, const CollisionFilterData& filter_data = {}, void* user_data = nullptr);
-            physx::PxRigidDynamic* CreateDynamicCapsule(uint64_t entity_id, const SharedVec3& position, const SharedQuaternion& orientation, float radius, float half_height, float density, physx::PxMaterial* material = nullptr, const CollisionFilterData& filter_data = {}, void* user_data = nullptr);
+            physx::PxRigidDynamic* CreateDynamicBox(uint64_t entity_id, const SharedVec3& position, const SharedQuaternion& orientation, const SharedVec3& half_extents, float density, EPhysicsObjectType object_type, physx::PxMaterial* material = nullptr, void* user_data = nullptr);
+            physx::PxRigidDynamic* CreateDynamicSphere(uint64_t entity_id, const SharedVec3& position, float radius, float density, EPhysicsObjectType object_type, physx::PxMaterial* material = nullptr, void* user_data = nullptr);
+            physx::PxRigidDynamic* CreateDynamicCapsule(uint64_t entity_id, const SharedVec3& position, const SharedQuaternion& orientation, float radius, float half_height, float density, EPhysicsObjectType object_type, physx::PxMaterial* material = nullptr, void* user_data = nullptr);
 
             void RegisterRigidActor(uint64_t entity_id, physx::PxRigidActor* actor);
             void UnregisterRigidActor(uint64_t entity_id);
@@ -198,7 +179,6 @@ namespace RiftForged {
 
             physx::PxScene* GetScene() const { return m_scene; }
             physx::PxPhysics* GetPhysics() const { return m_physics; }
-            //physx::PxCooking* GetCooking() const { return m_cooking; }
             physx::PxFoundation* GetFoundation() const { return m_foundation; }
             void SetPvdTransport(physx::PxPvdTransport* transport) { m_pvd_transport = transport; }
 
@@ -208,16 +188,16 @@ namespace RiftForged {
             physx::PxDefaultCpuDispatcher* m_dispatcher = nullptr;
             physx::PxScene* m_scene = nullptr;
             physx::PxMaterial* m_default_material = nullptr;
-            physx::PxCooking* m_cooking = nullptr;
+            // physx::PxCooking* m_cooking = nullptr; // REMOVED
             physx::PxControllerManager* m_controller_manager = nullptr;
             std::map<uint64_t, physx::PxController*> m_playerControllers;
             mutable std::mutex m_playerControllersMutex;
             std::map<uint64_t, physx::PxRigidActor*> m_entityActors;
             mutable std::mutex m_entityActorsMutex;
-			mutable std::mutex m_physicsMutex; // Protects access to physics-related data
+            mutable std::mutex m_physicsMutex;
             physx::PxPvd* m_pvd = nullptr;
             physx::PxPvdTransport* m_pvd_transport = nullptr;
-			physx::PxQueryFilterData m_default_filter_data; // Default filter data for queries
+            physx::PxQueryFilterData m_default_filter_data;
 
             void SetupShapeFiltering(physx::PxShape* shape, const CollisionFilterData& filter_data);
 

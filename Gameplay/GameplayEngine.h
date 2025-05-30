@@ -6,7 +6,8 @@
 #include "ActivePlayer.h"   // Defines GameLogic::ActivePlayer
 #include "PlayerManager.h"  // Defines GameLogic::PlayerManager
 #include "RiftStepLogic.h"  // Defines GameLogic::RiftStepOutcome, GameLogic::ERiftStepType etc.
-#include "CombatLogic.h"    // Defines GameLogic::AttackOutcome (Assumed to exist) 
+#include "CombatData.h"    // Defines GameLogic::AttackOutcome (Assumed to exist) 
+#include "CombatSystem.h"
 
 #include "../PhysicsEngine/PhysicsEngine.h" // Defines Physics::PhysicsEngine
 
@@ -67,7 +68,7 @@ namespace RiftForged {
             // --- Potentially other gameplay logic methods ---
             // void UpdateGameWorld(float delta_time_sec); // Example for world events, NPC AI ticks, etc.          
             // void ApplyStatusEffectToPlayer(GameLogic::ActivePlayer* player, Networking::Shared::StatusEffectCategory effect, uint32_t duration_ms, float magnitude);
-            
+
             // Ability Placeholder Logic
             // SomeAbilityOutcome ExecuteSolarStrike(GameLogic::ActivePlayer* melee, const BasicAttackTargetInfo& target);
             // SomeAbilityOutcome ExecuteSolarFlare(GameLogic::ActivePlayer* caster, const Networking::Shared::Vec3& target_point);

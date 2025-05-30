@@ -15,7 +15,7 @@
 #include "../Gameplay/PlayerManager.h"         // Included for m_playerManager type, though not used for GetOrCreatePlayer anymore
 #include "../Gameplay/ActivePlayer.h"          // For ActivePlayer definition
 #include "../Gameplay/GameplayEngine.h"        // For m_gameplayEngine
-#include "../Gameplay/CombatLogic.h"           // For AttackOutcome, DamageApplicationDetails
+#include "../Gameplay/CombatData.h"           // For AttackOutcome, DamageApplicationDetails
 #include "../Utils/Logger.h"                   // For RF_NETWORK_INFO etc.
 
 #include <chrono> // For timestamps

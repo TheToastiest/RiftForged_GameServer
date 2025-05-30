@@ -7,6 +7,11 @@
 #include <iostream> // For logging (replace with your logger)
 #include <vector>   // For std::vector
 #include <cstring>  // For memcpy
+#include <windows.h> // For Sleep (or use std::this_thread::sleep_for in C++11+)
+#include <timeapi.h> // For MMRESULT, TIMERR_NOERROR, timeBeginPeriod, timeEndPeriod
+
+#pragma comment(lib, "Winmm.lib") 
+
 
 namespace RiftForged {
     namespace Server {
@@ -38,15 +43,13 @@ namespace RiftForged {
             }
             RF_CORE_INFO("GameServerEngine: Starting simulation loop..."); //
 
-            // ***** Initialize Physics Engine *****
-            // Define default gravity or get from config
-            //RiftForged::Networking::Shared::Vec3 default_gravity(0.0f, 0.0f, -9.81f);
-            //bool connect_to_pvd = true; // Or from config, true for development is good
-            //if (!m_physicsEngine.Initialize(default_gravity, connect_to_pvd)) { //
-            //    RF_CORE_CRITICAL("GameServerEngine: Failed to initialize PhysicsEngine!"); //
-            //    return; // Don't start simulation if physics fails
-            //}
-            //RF_CORE_INFO("GameServerEngine: PhysicsEngine Initialized."); //
+            MMRESULT timeResult = timeBeginPeriod(1); 
+            if (timeResult != TIMERR_NOERROR) {
+                RF_CORE_WARN("GameServerEngine: Failed to set timer resolution to 1ms. Error code: {}. Timing precision may be affected.", timeResult);
+                // You might choose to not start if this fails, or proceed with potentially less accurate timing.
+            } else {
+                RF_CORE_INFO("GameServerEngine: Timer resolution successfully set to 1ms.");
+            }
 
             m_isSimulatingThread.store(true, std::memory_order_release); //
             try {
@@ -59,32 +62,64 @@ namespace RiftForged {
         }
 
         void GameServerEngine::StopSimulationLoop() {
-            if (!m_isSimulatingThread.exchange(false, std::memory_order_acq_rel)) { //
-                if (m_simulationThread.joinable() && m_simulationThread.get_id() != std::this_thread::get_id()) { //
-                    m_shutdownThreadCv.notify_one(); //
-                    m_simulationThread.join(); //
+            if (!m_isSimulatingThread.exchange(false, std::memory_order_acq_rel)) {
+                // If it was already false, we might still need to join if called concurrently
+                // or if Stop was called before Start completed thread creation but after m_isSimulatingThread was set.
+                if (m_simulationThread.joinable() && m_simulationThread.get_id() != std::this_thread::get_id()) {
+                    m_shutdownThreadCv.notify_one();
+                    m_simulationThread.join();
                 }
-                return;
+                // If it was already false and not joinable, or called from itself (which is an error state handled later),
+                // it means the loop wasn't really "running" from this call's perspective for timer period management.
+                // RF_CORE_INFO("GameServerEngine: StopSimulationLoop called but loop was not considered actively running by this call.");
+                return; // Avoid attempting to restore timer period if it wasn't set by a corresponding Start
             }
-            RF_CORE_INFO("GameServerEngine: Signaling simulation loop to stop..."); //
-            m_shutdownThreadCv.notify_one(); //
-            if (m_simulationThread.joinable()) { //
-                if (m_simulationThread.get_id() == std::this_thread::get_id()) { //
-                    RF_CORE_CRITICAL("GameServerEngine::StopSimulationLoop called from simulation thread itself! This would deadlock."); //
+
+            RF_CORE_INFO("GameServerEngine: Signaling simulation loop to stop...");
+            m_shutdownThreadCv.notify_one();
+
+            if (m_simulationThread.joinable()) {
+                if (m_simulationThread.get_id() == std::this_thread::get_id()) {
+                    RF_CORE_CRITICAL("GameServerEngine::StopSimulationLoop called from simulation thread itself! This would deadlock.");
+                    // Cannot join self, and cannot safely restore timer period here as thread is still running.
+                    // This case means m_isSimulatingThread was true, so timer period *was* set.
+                    // This is a design issue if it happens. We should NOT restore timer here as thread is not finished.
                 }
                 else {
-                    m_simulationThread.join(); //
+                    m_simulationThread.join();
+                    RF_CORE_INFO("GameServerEngine: Simulation loop stopped.");
+
+                    // --- BEGIN MODIFICATION: Restore timer resolution ---
+                    // This should be called after the thread has successfully stopped.
+                    MMRESULT timeResult = timeEndPeriod(1); // Use the same period value as in timeBeginPeriod
+                    if (timeResult != TIMERR_NOERROR) {
+                        RF_CORE_ERROR("GameServerEngine: Failed to restore timer resolution. Error code: {}. This may affect system power or other applications.", timeResult);
+                    }
+                    else {
+                        RF_CORE_INFO("GameServerEngine: Timer resolution successfully restored.");
+                    }
+                    // --- END MODIFICATION ---
                 }
             }
-            RF_CORE_INFO("GameServerEngine: Simulation loop stopped."); //
+            else {
+                RF_CORE_WARN("GameServerEngine: Simulation thread was not joinable upon stop request, but m_isSimulatingThread was true. Timer period might not be restored if thread never ran/exited cleanly.");
+                // If the thread wasn't joinable but m_isSimulatingThread was true, it implies an unusual state.
+                // It's possible the thread never actually started or crashed.
+                // We might still want to attempt to restore the timer period as a best-effort,
+                // assuming timeBeginPeriod was called.
+                MMRESULT timeResult = timeEndPeriod(1);
+                if (timeResult != TIMERR_NOERROR) {
+                    RF_CORE_ERROR("GameServerEngine: Attempted to restore timer resolution (thread not joinable), but failed. Error code: {}", timeResult);
+                }
+                else {
+                    RF_CORE_INFO("GameServerEngine: Attempted to restore timer resolution (thread not joinable).");
+                }
+            }
+
 
             // Shutdown Physics Engine after simulation thread has stopped
-            m_physicsEngine.Shutdown(); //
-            RF_CORE_INFO("GameServerEngine: PhysicsEngine Shutdown."); //
-        }
-
-        bool GameServerEngine::IsSimulating() const { //
-            return m_isSimulatingThread.load(std::memory_order_relaxed); //
+            m_physicsEngine.Shutdown();
+            RF_CORE_INFO("GameServerEngine: PhysicsEngine Shutdown.");
         }
 
         void GameServerEngine::SimulationTick() {
@@ -108,7 +143,7 @@ namespace RiftForged {
                 // m_gameplayEngine.ProcessPendingInputs(delta_time_sec); // Conceptual
 
                 // --- 2. Execute Periodic Game Logic (AI, Buffs/Debuffs, etc.) ---
-                // m_gameplayEngine.UpdatePeriodicLogic(delta_time_sec); // Your placeholder
+                //m_gameplayEngine.UpdatePeriodicLogic(delta_time_sec); // Your placeholder
 
                 // --- 3. Physics Simulation Step ---
                 // <<< UNCOMMENTED AND ENSURED m_physicsEngine IS USED >>>
@@ -179,8 +214,8 @@ namespace RiftForged {
 
                         // Send only to the specific player whose state this is.
                         // Broadcasting all individual state updates is inefficient.
-                        if (!m_udpSocket.SendTo(player->networkEndpoint, send_buffer.data(), static_cast<int>(send_buffer.size()))) { //
-                            RF_NETWORK_ERROR("GameServerEngine: SendTo failed for S2C_EntityStateUpdateMsg for Player {} to {}", //
+                        if (!m_udpSocket.SendRawTo(player->networkEndpoint, send_buffer.data(), static_cast<int>(send_buffer.size()))) { //
+                            RF_NETWORK_ERROR("GameServerEngine: SendRawTo failed for S2C_EntityStateUpdateMsg for Player {} to {}", //
                                 player->playerId, player->networkEndpoint.ToString());
                         }
                         else {
@@ -205,6 +240,7 @@ namespace RiftForged {
                             return !m_isSimulatingThread.load(std::memory_order_relaxed);
                             });
                     }
+
                     else if (sleep_for < std::chrono::milliseconds(0)) { // Only log if we're genuinely behind
                         RF_ENGINE_WARN("SimulationTick: Tick processing duration ({:.2f}ms) exceeded interval ({}ms). Server may be overloaded.",
                             std::chrono::duration<double, std::milli>(tick_processing_duration).count(),

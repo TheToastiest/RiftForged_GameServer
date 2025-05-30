@@ -23,29 +23,17 @@
     <Filter Include="Config\ConfigLoader">
       <UniqueIdentifier>{c3bbd413-de80-49ff-b3b1-7a0805fe4cbd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Networking\Socket">
-      <UniqueIdentifier>{cfd0a24b-3754-4199-b6ff-fd82af15b63e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Networking\Clients">
       <UniqueIdentifier>{afd826c2-29eb-4f5d-a0cb-7cb9259c21bb}</UniqueIdentifier>
     </Filter>
     <Filter Include="Networking\Reliability">
       <UniqueIdentifier>{6a987c88-12ca-46d2-a419-bba46049ba1f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Networking\Reliability\ReliableUDPProtocol">
-      <UniqueIdentifier>{37ece7a4-57e5-4809-9d89-0f3ec25b6357}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Networking\Clients\ClientEndpoint">
       <UniqueIdentifier>{479e6b8a-d4e6-4da0-932e-2a68f28c83ca}</UniqueIdentifier>
     </Filter>
     <Filter Include="Networking\Clients\ClientManager">
       <UniqueIdentifier>{9e9e85fb-f325-4537-bdff-97ae1996dd3c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Networking\Socket\UDPSocketAsync">
-      <UniqueIdentifier>{a83618d8-8647-4eeb-b58e-fe5610dfb411}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Networking\Socket\NetworkBuffer">
-      <UniqueIdentifier>{32c806eb-0d48-4187-86e9-9688dab7011a}</UniqueIdentifier>
     </Filter>
     <Filter Include="PacketManagement">
       <UniqueIdentifier>{5ce11729-6c37-49a1-a4d5-f0cf071d131f}</UniqueIdentifier>
@@ -120,6 +108,18 @@
     <Filter Include="PacketManagement\Dispatch\MessageDispatcher">
       <UniqueIdentifier>{ba183a44-09de-46c1-9d30-b6fb15f2ede1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Networking\Reliability\UDPReliabilityProtocol">
+      <UniqueIdentifier>{37ece7a4-57e5-4809-9d89-0f3ec25b6357}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Networking\SocketHandling">
+      <UniqueIdentifier>{cfd0a24b-3754-4199-b6ff-fd82af15b63e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Networking\SocketHandling\UDPSocketAsync">
+      <UniqueIdentifier>{a83618d8-8647-4eeb-b58e-fe5610dfb411}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Networking\SocketHandling\NetworkBuffer">
+      <UniqueIdentifier>{32c806eb-0d48-4187-86e9-9688dab7011a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GamePacketHeader.h">
@@ -138,7 +138,7 @@
       <Filter>EntryPoint\UDPServerApp</Filter>
     </ClInclude>
     <ClInclude Include="UDPSocketAsync.h">
-      <Filter>Networking\Socket\UDPSocketAsync</Filter>
+      <Filter>Networking\SocketHandling\UDPSocketAsync</Filter>
     </ClInclude>
     <ClInclude Include="NetworkEndpoint.h">
       <Filter>Networking\NetworkEndpoint</Filter>
@@ -161,15 +161,6 @@
     <ClInclude Include="PingMessageHandler.h">
       <Filter>PacketManagement\Handlers_C2S\PingMessageHandler</Filter>
     </ClInclude>
-    <ClInclude Include="riftforged_c2s_udp_messages_generated.h">
-      <Filter>PacketManagement\Serialization\FlatBuffers\MessageHandlers</Filter>
-    </ClInclude>
-    <ClInclude Include="riftforged_s2c_udp_messages_generated.h">
-      <Filter>PacketManagement\Serialization\FlatBuffers\MessageHandlers</Filter>
-    </ClInclude>
-    <ClInclude Include="riftforged_common_types_generated.h">
-      <Filter>PacketManagement\Serialization\FlatBuffers\Serialization</Filter>
-    </ClInclude>
     <ClInclude Include="NetworkCommon.h">
       <Filter>Networking\NetworkCommon</Filter>
     </ClInclude>
@@ -178,6 +169,21 @@
     </ClInclude>
     <ClInclude Include="BasicAttackMessageHandler.h">
       <Filter>PacketManagement\Handlers_C2S\BasicAttackMessageHandler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SharedProtocols\Generated\riftforged_c2s_udp_messages_generated.h">
+      <Filter>PacketManagement\Serialization\FlatBuffers\MessageHandlers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SharedProtocols\Generated\riftforged_common_types_generated.h">
+      <Filter>PacketManagement\Serialization\FlatBuffers\MessageHandlers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SharedProtocols\Generated\riftforged_item_definitions_generated.h">
+      <Filter>PacketManagement\Serialization\FlatBuffers\MessageHandlers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SharedProtocols\Generated\riftforged_s2c_udp_messages_generated.h">
+      <Filter>PacketManagement\Serialization\FlatBuffers\MessageHandlers</Filter>
+    </ClInclude>
+    <ClInclude Include="UDPReliabilityProtocol.h">
+      <Filter>Networking\Reliability\UDPReliabilityProtocol</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -200,7 +206,7 @@
       <Filter>EntryPoint\UDPServerApp</Filter>
     </ClCompile>
     <ClCompile Include="UDPSocketAsync.cpp">
-      <Filter>Networking\Socket\UDPSocketAsync</Filter>
+      <Filter>Networking\SocketHandling\UDPSocketAsync</Filter>
     </ClCompile>
     <ClCompile Include="PacketProcessor.cpp">
       <Filter>PacketManagement\PacketProcessor</Filter>
@@ -225,6 +231,9 @@
     </ClCompile>
     <ClCompile Include="BasicAttackMessageHandler.cpp">
       <Filter>PacketManagement\Handlers_C2S\BasicAttackMessageHandler</Filter>
+    </ClCompile>
+    <ClCompile Include="UDPReliabilityProtocol.cpp">
+      <Filter>Networking\Reliability\UDPReliabilityProtocol</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

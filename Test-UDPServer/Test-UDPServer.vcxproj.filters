@@ -39,5 +39,8 @@
     <ClCompile Include="Main.cpp">
       <Filter>EntryPoint</Filter>
     </ClCompile>
+    <ClCompile Include="..\NetworkEngine\UDPReliabilityProtocol.cpp">
+      <Filter>Protocols</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

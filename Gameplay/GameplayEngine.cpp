@@ -194,11 +194,11 @@ namespace RiftForged {
 
             float displacement_amount = actual_speed * delta_time_sec;
 
-                // With this (assuming Vec3 has x(), y(), z() accessors and a zero check is needed):
-                if ((std::abs(local_desired_direction_from_client.x()) < 1e-6f &&
-                     std::abs(local_desired_direction_from_client.y()) < 1e-6f &&
-                     std::abs(local_desired_direction_from_client.z()) < 1e-6f) ||
-                    displacement_amount < 0.0001f) {
+            // With this (assuming Vec3 has x(), y(), z() accessors and a zero check is needed):
+            if ((std::abs(local_desired_direction_from_client.x()) < 1e-6f &&
+                std::abs(local_desired_direction_from_client.y()) < 1e-6f &&
+                std::abs(local_desired_direction_from_client.z()) < 1e-6f) ||
+                displacement_amount < 0.0001f) {
                 if (player->movementState == RiftForged::GameLogic::PlayerMovementState::Walking || player->movementState == RiftForged::GameLogic::PlayerMovementState::Sprinting) {
                     player->SetMovementState(RiftForged::GameLogic::PlayerMovementState::Idle);
                 }

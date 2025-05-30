@@ -23,6 +23,17 @@ namespace RiftForged {
                 return ipAddress + ":" + std::to_string(port);
             }
 
+            bool operator<(const NetworkEndpoint& other) const {
+                if (ipAddress < other.ipAddress) {
+                    return true;
+                }
+                if (ipAddress > other.ipAddress) {
+                    return false;
+                }
+                // IP addresses are equal, compare ports
+                return port < other.port;
+            }
+
             // Equality for comparisons, map keys etc.
             bool operator==(const NetworkEndpoint& other) const {
                 return ipAddress == other.ipAddress && port == other.port;

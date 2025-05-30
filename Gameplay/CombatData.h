@@ -1,4 +1,4 @@
-// File: GameplayEngine/CombatData.h
+﻿// File: GameplayEngine/CombatData.h
 // Copyright (c) 2023-2025 RiftForged Game Development Team
 // Description: Defines structures for combat outcomes and related logic.
 #pragma once

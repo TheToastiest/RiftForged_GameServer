@@ -39,7 +39,7 @@ namespace RiftForged {
                 RiftForged::Gameplay::GameplayEngine& gameplayEngine, // Added GameplayEngine
                 RiftForged::Networking::UDPSocketAsync& udpSocket,
                 RiftForged::Physics::PhysicsEngine& physicsEngine,
-                std::chrono::milliseconds tickInterval = std::chrono::milliseconds(8) // Default to 10Hz
+                std::chrono::milliseconds tickInterval = std::chrono::milliseconds(2) // Default to 250hz
             );
             ~GameServerEngine();
 
@@ -48,7 +48,7 @@ namespace RiftForged {
 
             void StartSimulationLoop();
             void StopSimulationLoop();
-            bool IsSimulating() const;
+            //bool IsSimulating() const;
 
         private:
             void SimulationTick();
@@ -56,7 +56,7 @@ namespace RiftForged {
             RiftForged::GameLogic::PlayerManager& m_playerManager;
             RiftForged::Gameplay::GameplayEngine& m_gameplayEngine; // Store reference
             RiftForged::Networking::UDPSocketAsync& m_udpSocket;
-			RiftForged::Physics::PhysicsEngine& m_physicsEngine; // Added PhysicsEngine reference
+            RiftForged::Physics::PhysicsEngine& m_physicsEngine; // Added PhysicsEngine reference
 
             std::atomic<bool> m_isSimulatingThread;
             std::thread m_simulationThread;

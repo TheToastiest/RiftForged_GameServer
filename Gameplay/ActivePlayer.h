@@ -98,7 +98,7 @@ namespace RiftForged {
                 const RiftForged::Networking::NetworkEndpoint& ep = {},
                 const RiftForged::Networking::Shared::Vec3& startPos = RiftForged::Networking::Shared::Vec3(0.0f, 0.0f, 0.0f),
                 const RiftForged::Networking::Shared::Quaternion& startOrientation = RiftForged::Networking::Shared::Quaternion(0.0f, 0.0f, 0.0f, 1.0f),
-				float cap_radius = 0.5f, float cap_half_height = 1.8f
+                float cap_radius = 0.5f, float cap_half_height = 1.8f
             );
 
             // --- State Accessors & Modifiers (Declarations) ---

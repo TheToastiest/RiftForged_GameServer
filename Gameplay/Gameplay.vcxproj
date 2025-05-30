@@ -135,18 +135,23 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ActivePlayer.cpp" />
+    <ClCompile Include="CombatSystem.cpp" />
     <ClCompile Include="GameplayEngine.cpp" />
     <ClCompile Include="PlayerManager.cpp" />
     <ClCompile Include="AbilityLogic.h" />
+    <ClCompile Include="RiftPointManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ActivePlayer.h" />
-    <ClInclude Include="CombatLogic.h" />
+    <ClInclude Include="CombatData.h" />
+    <ClInclude Include="CombatSystem.h" />
     <ClInclude Include="CraftingMaterials.h" />
     <ClInclude Include="GameplayEngine.h" />
     <ClInclude Include="ItemStaticData.h" />
     <ClInclude Include="ItemType.h" />
     <ClInclude Include="PlayerManager.h" />
+    <ClInclude Include="RiftPoint.h" />
+    <ClInclude Include="RiftPointManager.h" />
     <ClInclude Include="RiftStepLogic.h" />
   </ItemGroup>
   <ItemGroup>

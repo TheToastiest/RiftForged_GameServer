@@ -1,6 +1,6 @@
 ﻿// PlayerManager.cpp
 // RiftForged Gaming
-// Copright 2023 RiftForged
+// Copyright 2025-2028 RiftForged
 
 #include "PlayerManager.h"
 // Logger is included via PlayerManager.h -> Utilities/Logger.h
@@ -21,7 +21,7 @@ namespace RiftForged {
         }
 
         ActivePlayer* PlayerManager::GetOrCreatePlayer(
-            const RiftForged::Networking::NetworkEndpoint& endpoint, 
+            const RiftForged::Networking::NetworkEndpoint& endpoint,
             bool& out_was_newly_created
         )
         { //

@@ -134,9 +134,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FixPhysicsEngine.h" />
     <ClInclude Include="PhysicsEngine.h" />
+    <ClInclude Include="PhysicsTypes.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="FixPhysicsEngine.cpp" />
     <ClCompile Include="PhysicsEngine.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
