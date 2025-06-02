@@ -1,134 +1,153 @@
-﻿// File: GameplayEngine/ActivePlayer.h
-// Copyright (c) 2023-2025 RiftForged Game Development Team
+﻿// File: Gameplay/ActivePlayer.h (Refactored)
+// RiftForged Game Development Team
+// Purpose: Defines the ActivePlayer class, representing a connected player's
+//          state and capabilities within a game world instance.
+
 #pragma once
 
-#include <cstdint>
 #include <string>
 #include <vector>
-#include <map>
-#include <chrono>
 #include <atomic>
-#include <cmath>
-#include <algorithm>
+#include <chrono>
+#include <map>
+#include <cstdint>
+#include <mutex>      // For m_internalDataMutex
+#include <algorithm>  // For std::max/min
+#include <numeric>    // For std::accumulate (example in TakeDamage)
 
-#include "RiftStepLogic.h" // For RiftStepDefinition, RiftStepOutcome, ERiftStepType
+// Project-specific Networking & FlatBuffer Types (for data structures, not direct networking)
+// NetworkEndpoint.h is NO LONGER included here.
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h" // For Vec3, Quaternion, AnimationState, StatusEffectCategory, DamageType
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h" // For C2S::RiftStepDirectionalIntent (as parameter type)
 
-// FlatBuffers generated headers (V0.0.3)
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"
-// #include "../FlatBuffers/V0.0.3/riftforged_item_definitions_generated.h" // Include if player directly interacts with full item defs
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h" // For C2S::RiftStepDirectionalIntent
+// Project-specific Game Logic Types
+#include "RiftStepLogic.h"  // For GameLogic::RiftStepOutcome, ERiftStepType, RiftStepDefinition
 
-// Project utilities
-#include "../NetworkEngine/NetworkEndpoint.h"
-#include "../Utils/Logger.h"
-#include "../Utils/MathUtil.h" // For NormalizeQuaternion (used in inline SetOrientation if kept inline)
+// Utilities
+#include "../Utils/MathUtil.h" // For potential math operations
+#include "../Utils/Logger.h"   // For logging macros
 
 namespace RiftForged {
     namespace GameLogic {
 
+        // Represents the current movement state of the player.
         enum class PlayerMovementState : uint8_t {
-            Idle = 0, Walking, Sprinting, Stunned, Rooted, Dead, Ability_In_Use
+            Idle, Walking, Sprinting, Rifting, Ability_In_Use, Stunned, Rooted, Dead
         };
 
-        enum class EquippedWeaponCategory : uint32_t {
-            Unarmed = 0, Generic_Melee_Sword = 1, Generic_Melee_Axe = 2, Generic_Melee_Maul = 3,
-            Generic_Ranged_Bow = 101, Generic_Ranged_Gun = 102,
-            Generic_Magic_Staff = 201, Generic_Magic_Wand = 202
+        // Represents the category of weapon the player has equipped.
+        enum class EquippedWeaponCategory : uint8_t {
+            Unarmed, Generic_Melee_Sword, Generic_Melee_Axe, Generic_Melee_Maul,
+            Generic_Ranged_Bow, Generic_Ranged_Gun, Generic_Magic_Staff, Generic_Magic_Wand
         };
 
-        // Unique Ability ID for RiftStep, used as a key in the cooldown map.
+        // Ability IDs (ensure these are consistent across your game data)
         const uint32_t RIFTSTEP_ABILITY_ID = 1;
-        // Unique Ability ID for Basic Attack
         const uint32_t BASIC_ATTACK_ABILITY_ID = 2;
-
+        // ... other ability IDs ...
 
         struct ActivePlayer {
-            // --- Identifiers ---
+            // --- Core Identifiers ---
             uint64_t playerId;
-            RiftForged::Networking::NetworkEndpoint networkEndpoint;
+            // Networking::NetworkEndpoint networkEndpoint; // <<< REMOVED
 
-            // --- Core Transform State ---
-            RiftForged::Networking::Shared::Vec3 position;
-            RiftForged::Networking::Shared::Quaternion orientation;
+			std::string characterName; // Player's character name, used for display and identification
+            // --- Transform State ---
+            Networking::Shared::Vec3 position;
+            Networking::Shared::Quaternion orientation;
 
-            // --- Player Physical Properties ---
+            // --- Physics Properties ---
             float capsule_radius;
             float capsule_half_height;
 
-            // --- Core Resources & Stats ---
-            int currentWill;
-            int maxWill;
-            int currentHealth;
-            int maxHealth;
+            // --- Core Stats ---
+            int32_t currentHealth;
+            int32_t maxHealth;
+            int32_t currentWill;
+            uint32_t maxWill; // Consider int32_t for consistency if buffs can temporarily exceed, then clamp.
 
-            // --- Offensive Stats (Base values) ---
-            float base_ability_cooldown_modifier; // Multiplier, e.g., 1.0 for no change
-            float base_critical_hit_chance_percent;
-            float base_critical_hit_damage_multiplier;
-            float base_accuracy_rating_percent;
+            // --- Combat Stats & Resistances ---
+            float base_ability_cooldown_modifier;     // e.g., 1.0 for no change, 0.8 for 20% faster cooldowns
+            float base_critical_hit_chance_percent;   // e.g., 5.0 for 5%
+            float base_critical_hit_damage_multiplier;// e.g., 1.5 for +50% damage
+            float base_accuracy_rating_percent;       // e.g., 90.0 for 90%
             float base_basic_attack_cooldown_sec;
 
-            // --- Defensive Stats (Base values) ---
-            int32_t flat_physical_damage_reduction; float percent_physical_damage_reduction;
-            int32_t flat_radiant_damage_reduction;  float percent_radiant_damage_reduction;
-            int32_t flat_frost_damage_reduction;    float percent_frost_damage_reduction;
-            int32_t flat_shock_damage_reduction;    float percent_shock_damage_reduction;
-            int32_t flat_necrotic_damage_reduction; float percent_necrotic_damage_reduction;
-            int32_t flat_void_damage_reduction;     float percent_void_damage_reduction;
-            int32_t flat_cosmic_damage_reduction;   float percent_cosmic_damage_reduction;
-            int32_t flat_poison_damage_reduction;   float percent_poison_damage_reduction;
-            int32_t flat_nature_damage_reduction;   float percent_nature_damage_reduction;
-            int32_t flat_aetherial_damage_reduction;float percent_aetherial_damage_reduction;
+            int32_t flat_physical_damage_reduction;    float percent_physical_damage_reduction;
+            int32_t flat_radiant_damage_reduction;     float percent_radiant_damage_reduction;
+            int32_t flat_frost_damage_reduction;       float percent_frost_damage_reduction;
+            int32_t flat_shock_damage_reduction;       float percent_shock_damage_reduction;
+            int32_t flat_necrotic_damage_reduction;    float percent_necrotic_damage_reduction;
+            int32_t flat_void_damage_reduction;        float percent_void_damage_reduction;
+            int32_t flat_cosmic_damage_reduction;      float percent_cosmic_damage_reduction;
+            int32_t flat_poison_damage_reduction;      float percent_poison_damage_reduction;
+            int32_t flat_nature_damage_reduction;      float percent_nature_damage_reduction;
+            int32_t flat_aetherial_damage_reduction;   float percent_aetherial_damage_reduction;
 
-            // --- Gameplay Modifiers & States ---
-            RiftStepDefinition current_rift_step_definition;
-
+            // --- Equipment & Abilities ---
             EquippedWeaponCategory current_weapon_category;
-            uint32_t equipped_weapon_definition_id; // Links to ItemStaticData.definition_id
-
-            std::vector<RiftForged::Networking::Shared::StatusEffectCategory> activeStatusEffects;
-            uint32_t animationStateId; // Uses RiftForged::Networking::Shared::AnimationState
-            PlayerMovementState movementState;
-
+            uint32_t equipped_weapon_definition_id;
+            RiftStepDefinition current_rift_step_definition;
             std::map<uint32_t, std::chrono::steady_clock::time_point> abilityCooldowns;
-            std::atomic<bool> isDirty;
+
+            // --- State Flags and Info ---
+            PlayerMovementState movementState;
+            uint32_t animationStateId; // Corresponds to Networking::Shared::AnimationState or a game-specific enum
+            std::vector<Networking::Shared::StatusEffectCategory> activeStatusEffects; // Effects applied
+            std::atomic<bool> isDirty; // Flag for state synchronization
+
+            // --- Input Intentions (updated by GameplayEngine based on processed commands) ---
+            Networking::Shared::Vec3 last_processed_movement_intent; // Normalized direction vector or magnitude
+            bool was_sprint_intended;
+
+            // --- Synchronization ---
+            mutable std::mutex m_internalDataMutex; // Protects members like abilityCooldowns, activeStatusEffects if accessed/modified by multiple systems concurrently (less likely if GameplayEngine is single-threaded for player logic)
 
             // --- Constructor ---
-            ActivePlayer(uint64_t pId = 0,
-                const RiftForged::Networking::NetworkEndpoint& ep = {},
-                const RiftForged::Networking::Shared::Vec3& startPos = RiftForged::Networking::Shared::Vec3(0.0f, 0.0f, 0.0f),
-                const RiftForged::Networking::Shared::Quaternion& startOrientation = RiftForged::Networking::Shared::Quaternion(0.0f, 0.0f, 0.0f, 1.0f),
-                float cap_radius = 0.5f, float cap_half_height = 1.8f
-            );
+            ActivePlayer(uint64_t pId,
+                const Networking::Shared::Vec3& startPos = { 0.f, 0.f, 1.f },
+                const Networking::Shared::Quaternion& startOrientation = { 0.f, 0.f, 0.f, 1.f },
+                float cap_radius = 0.5f, float cap_half_height = 0.9f);
 
-            // --- State Accessors & Modifiers (Declarations) ---
-            // Simple setters might remain inline if preferred, complex ones in .cpp
-            void SetPosition(const RiftForged::Networking::Shared::Vec3& newPosition);
-            void SetOrientation(const RiftForged::Networking::Shared::Quaternion& newOrientation);
+            // --- Methods ---
+            // Note: Setters that change game state relevant for clients should set isDirty = true;
 
-            void SetWill(int value);
-            void DeductWill(int amount);
-            void AddWill(int amount); // Added for completeness
+            void SetPosition(const Networking::Shared::Vec3& newPosition);
+            void SetOrientation(const Networking::Shared::Quaternion& newOrientation);
 
-            void SetHealth(int value);
-            void TakeDamage(int raw_damage_amount, RiftForged::Networking::Shared::DamageType damage_type);
-            void HealDamage(int amount); // Added for completeness
+            void SetWill(int32_t value); // Changed to int32_t for consistency
+            void DeductWill(int32_t amount);
+            void AddWill(int32_t amount);
 
-            void SetAnimationState(RiftForged::Networking::Shared::AnimationState newState);
+            void SetHealth(int32_t value);
+            void HealDamage(int32_t amount);
+            // Returns actual damage taken after reductions
+            int32_t TakeDamage(int32_t raw_damage_amount, Networking::Shared::DamageType damage_type);
+
+            void SetAnimationState(Networking::Shared::AnimationState newState);
+            void SetAnimationStateId(uint32_t newStateId); // Use this if AnimationState enum isn't directly used
             void SetMovementState(PlayerMovementState newState);
 
             bool IsAbilityOnCooldown(uint32_t abilityId) const;
-            void SetAbilityCooldown(uint32_t abilityId, float duration_sec); // Takes float seconds
+            void StartAbilityCooldown(uint32_t abilityId, float base_duration_sec); // Takes base, applies modifiers
+			void SetAbilityCooldown(uint32_t abilityId, float cooldown_sec) {
+				StartAbilityCooldown(abilityId, cooldown_sec);
+			} // Convenience method
 
             void UpdateActiveRiftStepDefinition(const RiftStepDefinition& new_definition);
-            bool CanPerformRiftStep() const;
-            RiftStepOutcome PrepareRiftStepOutcome(RiftForged::Networking::UDP::C2S::RiftStepDirectionalIntent directional_intent);
+            bool CanPerformRiftStep() const; // Check against current_rift_step_definition and cooldowns/resources
+      
+            RiftStepOutcome PrepareRiftStepOutcome(Networking::UDP::C2S::RiftStepDirectionalIntent directional_intent, ERiftStepType type_requested);
 
-            void AddStatusEffects(const std::vector<RiftForged::Networking::Shared::StatusEffectCategory>& effects_to_add);
-            void RemoveStatusEffects(const std::vector<RiftForged::Networking::Shared::StatusEffectCategory>& effects_to_remove);
+            void AddStatusEffects(const std::vector<Networking::Shared::StatusEffectCategory>& effects_to_add);
+            void RemoveStatusEffects(const std::vector<Networking::Shared::StatusEffectCategory>& effects_to_remove);
+            bool HasStatusEffect(Networking::Shared::StatusEffectCategory effect) const;
 
             void SetEquippedWeapon(uint32_t weapon_def_id, EquippedWeaponCategory category);
-            RiftForged::Networking::Shared::Vec3 GetMuzzlePosition() const; // For ranged attacks
+            Networking::Shared::Vec3 GetMuzzlePosition() const; // Example utility, might need more context
+
+            // Helper to mark dirty
+            void MarkDirty();
         };
 
     } // namespace GameLogic

@@ -135,6 +135,11 @@
   <ItemGroup>
     <ClCompile Include="RiftForgedStressTest.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkEngine\NetworkEngine.vcxproj">
+      <Project>{83001634-fddf-4b58-bb81-c47bb590e612}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

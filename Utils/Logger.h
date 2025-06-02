@@ -75,13 +75,13 @@ namespace RiftForged {
 #define RF_CORE_ERROR(...)    if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->error(__VA_ARGS__); }
 #define RF_CORE_CRITICAL(...) if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->critical(__VA_ARGS__); }
 
+		// Combat Logger Macros
 #define RF_COMBAT_TRACE(...)    if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->trace(__VA_ARGS__); }
 #define RF_COMBAT_DEBUG(...)    if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->debug(__VA_ARGS__); }
 #define RF_COMBAT_INFO(...)     if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->info(__VA_ARGS__); }
 #define RF_COMBAT_WARN(...)     if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->warn(__VA_ARGS__); }
 #define RF_COMBAT_ERROR(...)    if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->error(__VA_ARGS__); }
 #define RF_COMBAT_CRITICAL(...) if (RiftForged::Utilities::Logger::GetCoreLogger()) { RiftForged::Utilities::Logger::GetCoreLogger()->critical(__VA_ARGS__); }
-
 
 // Network Logger Macros
 #define RF_NETWORK_TRACE(...) if (RiftForged::Utilities::Logger::GetNetworkLogger()) { RiftForged::Utilities::Logger::GetNetworkLogger()->trace(__VA_ARGS__); }
@@ -97,6 +97,7 @@ namespace RiftForged {
 #define RF_ENGINE_INFO(...)  if (RiftForged::Utilities::Logger::GetNetworkLogger()) { RiftForged::Utilities::Logger::GetNetworkLogger()->info(__VA_ARGS__); }
 #define RF_ENGINE_WARN(...)  if (RiftForged::Utilities::Logger::GetNetworkLogger()) { RiftForged::Utilities::Logger::GetNetworkLogger()->warn(__VA_ARGS__); }
 #define RF_ENGINE_ERROR(...) if (RiftForged::Utilities::Logger::GetNetworkLogger()) { RiftForged::Utilities::Logger::GetNetworkLogger()->error(__VA_ARGS__); }
+#define RF_ENGINE_CRITICAL(...) if (RiftForged::Utilities::Logger::GetNetworkLogger()) { RiftForged::Utilities::Logger::GetNetworkLogger()->critical(__VA_ARGS__); }
 
 // Gameplay Logger Macros
 #define RF_GAMEPLAY_TRACE(...) if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->trace(__VA_ARGS__); }
@@ -104,6 +105,7 @@ namespace RiftForged {
 #define RF_GAMEPLAY_INFO(...)  if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->info(__VA_ARGS__); }
 #define RF_GAMEPLAY_WARN(...)  if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->warn(__VA_ARGS__); }
 #define RF_GAMEPLAY_ERROR(...) if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->error(__VA_ARGS__); }
+#define RF_GAMEPLAY_CRITICAL(...) if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->critical(__VA_ARGS__); }
 
 // PlayerManager Logger Macros
 #define RF_PLAYERMGR_TRACE(...) if (RiftForged::Utilities::Logger::GetPlayerManagerLogger()) { RiftForged::Utilities::Logger::GetPlayerManagerLogger()->trace(__VA_ARGS__); }
@@ -113,12 +115,21 @@ namespace RiftForged {
 #define RF_PLAYERMGR_ERROR(...) if (RiftForged::Utilities::Logger::GetPlayerManagerLogger()) { RiftForged::Utilities::Logger::GetPlayerManagerLogger()->error(__VA_ARGS__); }
 #define RF_PLAYERMGR_CRITICAL(...) if (RiftForged::Utilities::Logger::GetPlayerManagerLogger()) { RiftForged::Utilities::Logger::GetPlayerManagerLogger()->critical(__VA_ARGS__); }
 
+		// Gameplay Engine Logger Macros
+#define RF_GAMELOGIC_TRACE(...) if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->trace(__VA_ARGS__); }
+#define RF_GAMELOGIC_DEBUG(...) if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->debug(__VA_ARGS__); }
+#define RF_GAMELOGIC_INFO(...)  if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->info(__VA_ARGS__); }
+#define RF_GAMELOGIC_WARN(...)  if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->warn(__VA_ARGS__); }
+#define RF_GAMELOGIC_ERROR(...) if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->error(__VA_ARGS__); }
+#define RF_GAMELOGIC_CRITICAL(...) if (RiftForged::Utilities::Logger::GetGameplayLogger()) { RiftForged::Utilities::Logger::GetGameplayLogger()->critical(__VA_ARGS__); }
+
 // DataAccess Logger Macros
 #define RF_DATAACCESS_TRACE(...) if (RiftForged::Utilities::Logger::GetDataAccessLogger()) { RiftForged::Utilities::Logger::GetDataAccessLogger()->trace(__VA_ARGS__); }
 #define RF_DATAACCESS_DEBUG(...) if (RiftForged::Utilities::Logger::GetDataAccessLogger()) { RiftForged::Utilities::Logger::GetDataAccessLogger()->debug(__VA_ARGS__); }
 #define RF_DATAACCESS_INFO(...)  if (RiftForged::Utilities::Logger::GetDataAccessLogger()) { RiftForged::Utilities::Logger::GetDataAccessLogger()->info(__VA_ARGS__); }
 #define RF_DATAACCESS_WARN(...)  if (RiftForged::Utilities::Logger::GetDataAccessLogger()) { RiftForged::Utilities::Logger::GetDataAccessLogger()->warn(__VA_ARGS__); }
 #define RF_DATAACCESS_ERROR(...) if (RiftForged::Utilities::Logger::GetDataAccessLogger()) { RiftForged::Utilities::Logger::GetDataAccessLogger()->error(__VA_ARGS__); }
+#define RF_DATAACCESS_CRITICAL(...) if (RiftForged::Utilities::Logger::GetDataAccessLogger()) { RiftForged::Utilities::Logger::GetDataAccessLogger()->critical(__VA_ARGS__); }
 
 // Cache Logger Macros
 #define RF_CACHE_TRACE(...) if (RiftForged::Utilities::Logger::GetCacheLogger()) { RiftForged::Utilities::Logger::GetCacheLogger()->trace(__VA_ARGS__); }
@@ -126,6 +137,7 @@ namespace RiftForged {
 #define RF_CACHE_INFO(...)  if (RiftForged::Utilities::Logger::GetCacheLogger()) { RiftForged::Utilities::Logger::GetCacheLogger()->info(__VA_ARGS__); }
 #define RF_CACHE_WARN(...)  if (RiftForged::Utilities::Logger::GetCacheLogger()) { RiftForged::Utilities::Logger::GetCacheLogger()->warn(__VA_ARGS__); }
 #define RF_CACHE_ERROR(...) if (RiftForged::Utilities::Logger::GetCacheLogger()) { RiftForged::Utilities::Logger::GetCacheLogger()->error(__VA_ARGS__); }
+#define RF_CACHE_CRITICAL(...) if (RiftForged::Utilities::Logger::GetCacheLogger()) { RiftForged::Utilities::Logger::GetCacheLogger()->critical(__VA_ARGS__); }
         
         // Player Manager Logger Macros
 #define RF_PLAYERMNGR_TRACE(...) if (RiftForged::Utilities::Logger::GetPlayerManagerLogger()) { RiftForged::Utilities::Logger::GetPlayerManagerLogger()->trace(__VA_ARGS__); }

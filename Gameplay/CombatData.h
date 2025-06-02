@@ -8,9 +8,9 @@
 #include <cstdint>
 
 // Ensure these paths point to your V0.0.3 generated FlatBuffers headers
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h" // For DamageType, DamageInstance, Vec3, StunInstance etc.
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h" // For S2C::CombatEventType
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h" // For C2S::CombatEventType
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h" // For DamageType, DamageInstance, Vec3, StunInstance etc.
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // For S2C::CombatEventType
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h" // For C2S::CombatEventType
 
 namespace RiftForged {
     namespace GameLogic {
@@ -18,14 +18,24 @@ namespace RiftForged {
         // Details for a single instance of damage being applied to a target
         struct DamageApplicationDetails {
             uint64_t target_id = 0;
+			uint64_t source_id = 0; // ID of the entity that dealt the damage (e.g., player, NPC, environment)
             int32_t final_damage_dealt = 0; // Actual damage after mitigation (if calculated here, or pre-mitigation if target applies its own)
             RiftForged::Networking::Shared::DamageType damage_type = RiftForged::Networking::Shared::DamageType::DamageType_MIN; // Default to None
             bool was_crit = false;
             bool was_kill = false;
             // RiftForged::Networking::Shared::Vec3 impact_point; // Optional: if needed for VFX precision
 
-            DamageApplicationDetails() = default;
+            DamageApplicationDetails() :
+                target_id(0),
+                source_id(0), // Initialize
+                damage_type(RiftForged::Networking::Shared::DamageType_None), // Use actual enumerator
+                final_damage_dealt(0),
+                was_crit(false),
+                was_kill(false)
+            {
+            }
         };
+
 
         // Outcome of a basic attack or combat ability execution
         struct AttackOutcome {
@@ -43,6 +53,7 @@ namespace RiftForged {
             // For Ranged Projectile Basic Attacks / Abilities
             bool spawned_projectile = false;
             uint64_t projectile_id = 0; // Unique ID for the spawned projectile
+            uint64_t projectile_owner_id = 0;   // <<< ENSURE THIS MEMBER IS PRESENT
             RiftForged::Networking::Shared::Vec3 projectile_start_position;
             RiftForged::Networking::Shared::Vec3 projectile_direction; // Normalized
             float projectile_speed = 0.0f;
@@ -50,13 +61,19 @@ namespace RiftForged {
             std::string projectile_vfx_tag;
             RiftForged::Networking::Shared::DamageInstance projectile_damage_on_hit; // ADDED: Damage details projectile carries
 
-            AttackOutcome() {
-                // Ensure DamageInstance within projectile_damage_on_hit is properly defaulted
-                projectile_damage_on_hit = RiftForged::Networking::Shared::DamageInstance(
-                    0,
-                    RiftForged::Networking::Shared::DamageType::DamageType_MIN,
-                    false
-                );
+            AttackOutcome() : // Default constructor
+                success(false),
+                simulated_combat_event_type(RiftForged::Networking::UDP::S2C::CombatEventType_None),
+                is_basic_attack(false),
+                spawned_projectile(false),
+                projectile_id(0),
+                projectile_owner_id(0), // Initialize
+                projectile_start_position(0.f, 0.f, 0.f),
+                projectile_direction(0.f, 1.f, 0.f), // Default forward
+                projectile_speed(0.f),
+                projectile_max_range(0.f)
+                // projectile_damage_on_hit default constructed
+            {
             }
         };
 

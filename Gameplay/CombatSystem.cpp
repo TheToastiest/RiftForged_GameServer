@@ -8,8 +8,8 @@
 #include "../PhysicsEngine/PhysicsEngine.h"
 #include "../PhysicsEngine/PhysicsTypes.h"
 #include "../Utils/MathUtil.h"      // For vector math
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h"
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h"
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h"
 #include "../Utils/Logger.h" // For logging macros
 
 

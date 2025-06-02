@@ -142,6 +142,9 @@
     <ClInclude Include="BasicAttackMessageHandler.h" />
     <ClInclude Include="GamePacketHeader.h" />
     <ClInclude Include="ConfigLoader.h" />
+    <ClInclude Include="IMessageHandler.h" />
+    <ClInclude Include="INetworkIO.h" />
+    <ClInclude Include="INetworkIOEvents.h" />
     <ClInclude Include="MessageDispatcher.h" />
     <ClInclude Include="MovementMessageHandler.h" />
     <ClInclude Include="NetworkCommon.h" />
@@ -151,7 +154,8 @@
     <ClInclude Include="RiftStepMessageHandler.h" />
     <ClInclude Include="ServerConfig.h" />
     <ClInclude Include="TurnMessageHandler.h" />
-    <ClInclude Include="UDPHandler.h" />
+    <ClInclude Include="OverlappedIOContext.h" />
+    <ClInclude Include="UDPPacketHandler.h" />
     <ClInclude Include="UDPReliabilityProtocol.h" />
     <ClInclude Include="UDPServerApp.h" />
     <ClInclude Include="UDPSocketAsync.h" />
@@ -169,9 +173,9 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ConfigLoader.cpp" />
     <ClCompile Include="TurnMessageHandler.cpp" />
+    <ClCompile Include="UDPPacketHandler.cpp" />
     <ClCompile Include="UDPReliabilityProtocol.cpp" />
     <ClCompile Include="UDPSocketAsync.cpp" />
-    <ClCompile Include="UDPHandler.cpp" />
     <ClCompile Include="UDPServerApp.cpp" />
   </ItemGroup>
   <ItemGroup>

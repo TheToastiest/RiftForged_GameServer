@@ -8,8 +8,8 @@
 // Assuming riftforged_common_types.fbs (and its generated C++ header) is available
 // and will define Shared::DamageType, Shared::StatusEffectCategory etc.
 // Update this include path to where your generated FlatBuffers C++ headers reside.
-#include "../FlatBuffers/v0.0.3/riftforged_common_types_generated.h"
-#include "../FlatBuffers/v0.0.3/riftforged_s2c_udp_messages_generated.h" // For S2C::RiftStepEffectPayload enum
+#include "../FlatBuffers/v0.0.4/riftforged_common_types_generated.h"
+#include "../FlatBuffers/v0.0.4/riftforged_s2c_udp_messages_generated.h" // For S2C::RiftStepEffectPayload enum
 // Note: The above include paths are examples. Adjust them to your project structure.
 
 // ^^ Note: I've assumed a typical generation path "FlatBuffers/Namespace1/Namespace2/file_generated.h"

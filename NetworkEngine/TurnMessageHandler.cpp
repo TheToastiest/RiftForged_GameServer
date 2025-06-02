@@ -9,8 +9,8 @@
 // PlayerManager.h is likely included via GameplayEngine.h or TurnMessageHandler.h constructor
 
 // FlatBuffers (V0.0.3)
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h" // For C2S_TurnIntentMsg
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h" // Not strictly needed here unless creating S2C messages directly
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h" // For C2S_TurnIntentMsg
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // Not strictly needed here unless creating S2C messages directly
 
 namespace RiftForged {
     namespace Networking {

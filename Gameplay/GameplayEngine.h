@@ -12,9 +12,9 @@
 #include "../PhysicsEngine/PhysicsEngine.h" // Defines Physics::PhysicsEngine
 
 // FlatBuffers generated headers (Assuming V0.0.3 is current)
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h" // For C2S::RiftStepDirectionalIntent
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h" // Potentially for constructing S2C messages later
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"   // For Shared::Vec3 etc.
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h" // For C2S::RiftStepDirectionalIntent
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // Potentially for constructing S2C messages later
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h"   // For Shared::Vec3 etc.
 
 // Utility headers
 #include "../Utils/MathUtil.h"

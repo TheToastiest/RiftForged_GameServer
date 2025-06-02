@@ -1,317 +1,4 @@
-﻿// In UDPReliabilityProtocol.cpp
-
-//#include "UDPReliabilityProtocol.h"
-//#include "../Utils/Logger.h" // For RF_NETWORK_... macros
-//#include <cstring>           // For memcpy
-//
-//namespace RiftForged {
-//    namespace Networking {
-//
-//        // --- PrepareOutgoingPacket ---
-//        std::vector<uint8_t> PrepareOutgoingPacket(
-//            ReliableConnectionState& connectionState,
-//            MessageType messageType,
-//            const uint8_t* payloadData,
-//            uint16_t payloadSize,
-//            uint8_t packetFlags
-//        ) {
-//            if (!HasFlag(packetFlags, GamePacketFlag::IS_ACK_ONLY) && payloadSize > 0 && payloadData == nullptr) {
-//                // Corrected Logging:
-//                RF_NETWORK_WARN("PrepareOutgoingPacket: Payload data is null for a non-ACK-only packet with payload size > 0. Type: {}", static_cast<uint16_t>(messageType));
-//                return {};
-//            }
-//            if (HasFlag(packetFlags, GamePacketFlag::IS_ACK_ONLY) && payloadSize > 0) {
-//                // Corrected Logging:
-//                RF_NETWORK_WARN("PrepareOutgoingPacket: ACK-only packet should not have a payload. Type: {}, PayloadSize: {}. Ignoring payload.", static_cast<uint16_t>(messageType), payloadSize);
-//                payloadSize = 0;
-//                payloadData = nullptr;
-//            }
-//
-//            GamePacketHeader header;
-//            header.protocolId = CURRENT_PROTOCOL_ID_VERSION;
-//            header.messageType = messageType;
-//            header.flags = packetFlags;
-//            header.ackNumber = connectionState.highestReceivedSequenceNumberFromRemote;
-//            header.ackBitfield = connectionState.receivedSequenceBitfield;
-//
-//            if (HasFlag(packetFlags, GamePacketFlag::IS_RELIABLE)) {
-//                header.sequenceNumber = connectionState.nextOutgoingSequenceNumber++;
-//                // Corrected Logging (if uncommented):
-//                RF_NETWORK_TRACE("Preparing RELIABLE packet Seq: {}, Ack: {}, AckBits: 0x{:08X}, Type: {}", 
-//                header.sequenceNumber, header.ackNumber, header.ackBitfield, static_cast<uint16_t>(messageType));
-//            }
-//            else {
-//                header.sequenceNumber = 0;
-//                // Corrected Logging (if uncommented):
-//                RF_NETWORK_TRACE("Preparing UNRELIABLE packet, Ack: {}, AckBits: 0x{:08X}, Type: {}", 
-//                header.ackNumber, header.ackBitfield, static_cast<uint16_t>(messageType));
-//            }
-//
-//            std::vector<uint8_t> packetBuffer(GetGamePacketHeaderSize() + payloadSize);
-//            std::memcpy(packetBuffer.data(), &header, GetGamePacketHeaderSize());
-//            if (payloadData && payloadSize > 0) {
-//                std::memcpy(packetBuffer.data() + GetGamePacketHeaderSize(), payloadData, payloadSize);
-//            }
-//
-//            if (HasFlag(packetFlags, GamePacketFlag::IS_RELIABLE)) {
-//                connectionState.unacknowledgedSentPackets.emplace_back(
-//                    header.sequenceNumber,
-//                    packetBuffer,
-//                    HasFlag(packetFlags, GamePacketFlag::IS_ACK_ONLY)
-//                );
-//                // Corrected Logging (if uncommented):
-//                // RF_NETWORK_TRACE("Queued reliable packet Seq: {} for ACK. Unacked count: {}", 
-//                //    header.sequenceNumber, connectionState.unacknowledgedSentPackets.size());
-//            }
-//
-//            // This part was in my previous draft but belongs here for PrepareOutgoingPacket
-//            connectionState.hasPendingAckToSend = false;
-//            connectionState.lastPacketSentTimeToRemote = std::chrono::steady_clock::now();
-//
-//            return packetBuffer;
-//        }
-//
-//        // --- ProcessIncomingPacketHeader ---
-//        bool ProcessIncomingPacketHeader(
-//            ReliableConnectionState& connectionState,
-//            const GamePacketHeader& receivedHeader,
-//            const uint8_t* packetPayloadData,
-//            uint16_t packetPayloadLength,
-//            const uint8_t** out_payloadToProcess,
-//            uint16_t* out_payloadSize
-//        ) {
-//            if (out_payloadToProcess) *out_payloadToProcess = nullptr;
-//            if (out_payloadSize) *out_payloadSize = 0;
-//
-//            uint32_t remoteAckNum = receivedHeader.ackNumber;
-//            uint32_t remoteAckBits = receivedHeader.ackBitfield;
-//
-//            // Your original logging for "Processing ACKs from remote"
-//            if (remoteAckNum > 0 || remoteAckBits > 0) {
-//                RF_NETWORK_TRACE("ACK RECV: Processing ACKs from remote: AckNum=%u, AckBits=0x%08X. Current unacked count: %zu",
-//                    remoteAckNum, remoteAckBits, connectionState.unacknowledgedSentPackets.size());
-//            }
-//
-//            size_t preAckRemovalCount = connectionState.unacknowledgedSentPackets.size();
-//            int actualAckedCountThisPass = 0;
-//
-//            connectionState.unacknowledgedSentPackets.remove_if(
-//                [&](const ReliableConnectionState::SentPacketInfo& sentPacket) {
-//                    // Detailed logging for each packet being checked
-//                    RF_NETWORK_TRACE("ACK CHECK: Comparing our_sent_seq=%u (isAckOnly=%s) against remote_ack_num=%u, remote_ack_bits=0x%08X",
-//                        sentPacket.sequenceNumber, sentPacket.isAckOnly ? "true" : "false", remoteAckNum, remoteAckBits);
-//
-//                    bool acknowledged = false;
-//                    if (sentPacket.sequenceNumber == remoteAckNum) {
-//                        acknowledged = true;
-//                        RF_NETWORK_INFO("ACK MATCH: Direct ACK for our_sent_seq=%u by remote_ack_num=%u. Marking for removal.",
-//                            sentPacket.sequenceNumber, remoteAckNum);
-//                    }
-//                    else if (sentPacket.sequenceNumber < remoteAckNum) {
-//                        uint32_t diff = remoteAckNum - sentPacket.sequenceNumber;
-//                        if (diff > 0 && diff <= 32) { // diff must be > 0 for bit index
-//                            uint32_t bitIndex = diff - 1;
-//                            if ((remoteAckBits >> bitIndex) & 1U) {
-//                                acknowledged = true;
-//                                RF_NETWORK_INFO("ACK MATCH: Bitfield ACK for our_sent_seq=%u (diff=%u, bitIndex=%u) by remote_ack_num=%u, remote_ack_bits=0x%08X. Marking for removal.",
-//                                    sentPacket.sequenceNumber, diff, bitIndex, remoteAckNum, remoteAckBits);
-//                            }
-//                            else {
-//                                RF_NETWORK_TRACE("ACK CHECK: Bitfield NO match for our_sent_seq=%u (diff=%u, bitIndex=%u). Remote AckBits: 0x%08X, Bit to test: 0x%08X",
-//                                    sentPacket.sequenceNumber, diff, bitIndex, remoteAckBits, (1U << bitIndex));
-//                            }
-//                        }
-//                        else {
-//                            RF_NETWORK_TRACE("ACK CHECK: our_sent_seq=%u is too old (diff=%u > 32) to be in bitfield of remote_ack_num=%u.",
-//                                sentPacket.sequenceNumber, diff, remoteAckNum);
-//                        }
-//                    }
-//                    else {
-//                        // sentPacket.sequenceNumber > remoteAckNum. This means the remote is ACKing something older than this packet.
-//                        // This packet is definitely not ACKed by this remoteAckNum.
-//                        RF_NETWORK_TRACE("ACK CHECK: our_sent_seq=%u > remote_ack_num=%u. Not ACKed by this ack number.",
-//                            sentPacket.sequenceNumber, remoteAckNum);
-//                    }
-//
-//                    if (acknowledged) {
-//                        RF_NETWORK_INFO("ACK REMOVE: Our sent packet Seq=%u was ACKNOWLEDGED. Removing from unacknowledged list.", sentPacket.sequenceNumber);
-//                        actualAckedCountThisPass++;
-//                        // TODO: Here you would also update Round Trip Time (RTT) estimations
-//                        // e.g., RTT = now() - sentPacket.timeSent;
-//                        // connectionState.UpdateRTT(RTT);
-//                        return true; // Remove from list
-//                    }
-//                    return false; // Keep in list
-//                }
-//            );
-//
-//            if (actualAckedCountThisPass > 0) {
-//                RF_NETWORK_INFO("ACK PROC: Processed %d ACKs. Unacked packets remaining: %zu (was %zu)",
-//                    actualAckedCountThisPass, connectionState.unacknowledgedSentPackets.size(), preAckRemovalCount);
-//            }
-//
-//
-//            // ... (rest of your ProcessIncomingPacketHeader logic for handling incoming sequence numbers,
-//            //      updating connectionState.highestReceivedSequenceNumberFromRemote,
-//            //      connectionState.receivedSequenceBitfield, setting hasPendingAckToSend,
-//            //      and determining shouldProcessPayload for gameLogicPayload) ...
-//            // This part should remain as you had it from prompt 4, ensuring it correctly
-//            // handles new incoming reliable packets from the client.
-//
-//            // Example snippet of how that part continues (ensure it matches your version from prompt 4)
-//            bool shouldRelayToGameLogic = false; // Renamed from shouldProcessPayload for clarity
-//            bool ackStateForRemoteUpdated = false;
-//
-//            if (HasFlag(receivedHeader.flags, GamePacketFlag::IS_RELIABLE)) {
-//                uint32_t incomingSeqNum = receivedHeader.sequenceNumber;
-//                RF_NETWORK_TRACE("RECV RELIABLE: Received RELIABLE packet from remote with Seq=%u. Our highest_remote_seq=%u, bits=0x%08X",
-//                    incomingSeqNum, connectionState.highestReceivedSequenceNumberFromRemote, connectionState.receivedSequenceBitfield);
-//
-//                if (incomingSeqNum > connectionState.highestReceivedSequenceNumberFromRemote) {
-//                    uint32_t diff = incomingSeqNum - connectionState.highestReceivedSequenceNumberFromRemote;
-//                    // Shift bitfield left by diff. If diff is large, effectively clears the bitfield.
-//                    if (diff >= 32) {
-//                        connectionState.receivedSequenceBitfield = 0;
-//                    }
-//                    else {
-//                        connectionState.receivedSequenceBitfield <<= diff;
-//                    }
-//                    // Set the bit for the packet just before the new highest (if applicable and within 32)
-//                    // This logic correctly ACKs the packet that *was* highest if the new one is exactly 1 greater.
-//                    // And also correctly sets bits if there was a gap.
-//                    if (connectionState.highestReceivedSequenceNumberFromRemote > 0 && diff > 0 && diff <= 32) {
-//                        // This sets bit for highestReceivedSequenceNumberFromRemote which is now incomingSeqNum-diff
-//                        // The bit for incomingSeqNum-1 should be set if diff == 1, 
-//                        // which is (1U << (1-1)) = (1U << 0)
-//                        connectionState.receivedSequenceBitfield |= (1U << (diff - 1));
-//                    }
-//                    else if (connectionState.highestReceivedSequenceNumberFromRemote == 0 && incomingSeqNum == 0 && diff == 0) {
-//                        // Special case: first packet is seq 0. Highest is 0, bitfield remains 0.
-//                        // The fact that we received seq 0 is "remembered" by highestReceivedSequenceNumberFromRemote becoming 0.
-//                        // The ACK packet will send ackNum=0, ackBits=0. The sender checks if sent_seq == ackNum.
-//                    }
-//
-//
-//                    connectionState.highestReceivedSequenceNumberFromRemote = incomingSeqNum;
-//                    shouldRelayToGameLogic = true; // This is a new packet
-//                    ackStateForRemoteUpdated = true;
-//                    RF_NETWORK_INFO("RECV RELIABLE: New highest remote Seq=%u. Our ACK state for them: highest=%u, bits=0x%08X. Will process payload.",
-//                        incomingSeqNum, connectionState.highestReceivedSequenceNumberFromRemote, connectionState.receivedSequenceBitfield);
-//                }
-//                else if (incomingSeqNum < connectionState.highestReceivedSequenceNumberFromRemote) {
-//                    uint32_t diff = connectionState.highestReceivedSequenceNumberFromRemote - incomingSeqNum;
-//                    if (diff > 0 && diff <= 32) { // Packet is within the bitfield range
-//                        uint32_t bitToTestOrSet = (1U << (diff - 1));
-//                        if (!(connectionState.receivedSequenceBitfield & bitToTestOrSet)) { // If bit not already set
-//                            connectionState.receivedSequenceBitfield |= bitToTestOrSet; // Set the bit
-//                            shouldRelayToGameLogic = true; // Process this out-of-order packet
-//                            ackStateForRemoteUpdated = true;
-//                            RF_NETWORK_INFO("RECV RELIABLE: Accepted out-of-order remote Seq=%u (diff=%u). Our ACK state for them: highest=%u, bits=0x%08X. Will process payload.",
-//                                incomingSeqNum, diff, connectionState.highestReceivedSequenceNumberFromRemote, connectionState.receivedSequenceBitfield);
-//                        }
-//                        else {
-//                            RF_NETWORK_TRACE("RECV RELIABLE: Duplicate reliable remote Seq=%u (already in bitfield). Discarding payload.", incomingSeqNum);
-//                            shouldRelayToGameLogic = false; // Already processed
-//                        }
-//                    }
-//                    else { // Packet is too old (older than highest - 32)
-//                        RF_NETWORK_TRACE("RECV RELIABLE: Very old reliable remote Seq=%u (older than highest_remote_seq %u - 32). Discarding payload.",
-//                            incomingSeqNum, connectionState.highestReceivedSequenceNumberFromRemote);
-//                        shouldRelayToGameLogic = false;
-//                    }
-//                }
-//                else { // incomingSeqNum == connectionState.highestReceivedSequenceNumberFromRemote
-//                    // This is a duplicate of the current highest.
-//                    // This check assumes seq numbers are > 0 for normal ops, or seq 0 is handled by the '>' path first.
-//                    // If highestReceivedSequenceNumberFromRemote is 0 and incomingSeqNum is 0, it would have been caught by ">" if it was the first (diff 0 means no shift in bitfield).
-//                    // Thus, if they are equal here, it's a duplicate of something already processed as highest.
-//                    RF_NETWORK_TRACE("RECV RELIABLE: Duplicate of highest remote Seq=%u. Discarding payload.", incomingSeqNum);
-//                    shouldRelayToGameLogic = false;
-//                }
-//            }
-//            else if (packetPayloadData && packetPayloadLength > 0 && !HasFlag(receivedHeader.flags, GamePacketFlag::IS_RELIABLE)) {
-//                // Unreliable packet with payload
-//                RF_NETWORK_TRACE("RECV UNRELIABLE: Received UNRELIABLE packet with payload. Will process payload.");
-//                shouldRelayToGameLogic = true;
-//            }
-//            else {
-//                // No payload to process (e.g. ACK-only packet that is not reliable, or reliable packet with no payload that was duplicate/old)
-//                RF_NETWORK_TRACE("RECV: Packet from remote has no game logic payload to process (Header MsgType: %s, Flags: 0x%02X).",
-//                    EnumNameMessageType(receivedHeader.messageType), receivedHeader.flags);
-//            }
-//
-//            if (ackStateForRemoteUpdated) {
-//                connectionState.hasPendingAckToSend = true;
-//                RF_NETWORK_TRACE("ACK STATE UPDATE: Marking hasPendingAckToSend=true for remote due to received reliable packet.");
-//            }
-//
-//            if (shouldRelayToGameLogic) {
-//                if (packetPayloadData && packetPayloadLength > 0) {
-//                    if (out_payloadToProcess) *out_payloadToProcess = packetPayloadData;
-//                    if (out_payloadSize) *out_payloadSize = packetPayloadLength;
-//                    return true; // Payload should be processed by PacketProcessor
-//                }
-//                else if (HasFlag(receivedHeader.flags, GamePacketFlag::IS_RELIABLE)) {
-//                    // Reliable packet was marked to process, but no actual payload.
-//                    // This can happen if an ACK-only reliable packet is somehow marked for processing (shouldn't)
-//                    // or if a new sequence number arrived in a packet that genuinely had no higher-level payload.
-//                    // The ACK has been processed, and an ACK will be sent back.
-//                    RF_NETWORK_WARN("ProcessIncomingPacketHeader: Reliable packet Seq=%u indicated for payload processing but payload is null/empty. ACK already handled.",
-//                        receivedHeader.sequenceNumber);
-//                    return false; // No actual game payload to pass up
-//                }
-//            }
-//            return false; // No game payload to process by PacketProcessor
-//        }
-//
-//
-//        // --- GetPacketsForRetransmission ---
-//        std::vector<std::vector<uint8_t>> GetPacketsForRetransmission(
-//            ReliableConnectionState& connectionState,
-//            std::chrono::steady_clock::time_point currentTime,
-//            float RTO_ms,
-//            int maxRetries
-//        ) {
-//            std::vector<std::vector<uint8_t>> packetsToResend;
-//            // RF_NETWORK_TRACE("Checking for retransmissions... Unacked: {}, RTO: {:.2f} ms", 
-//            //    connectionState.unacknowledgedSentPackets.size(), RTO_ms);
-//
-//            auto it = connectionState.unacknowledgedSentPackets.begin();
-//            while (it != connectionState.unacknowledgedSentPackets.end()) {
-//                ReliableConnectionState::SentPacketInfo& sentPacket = *it;
-//                auto timeSinceSent = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - sentPacket.timeSent);
-//
-//                if (timeSinceSent.count() >= static_cast<long long>(RTO_ms)) {
-//                    if (sentPacket.retries < maxRetries) {
-//                        sentPacket.retries++;
-//                        sentPacket.timeSent = currentTime;
-//                        packetsToResend.push_back(sentPacket.packetData);
-//                        // Corrected Logging:
-//                        // RF_NETWORK_WARN("Retransmitting packet Seq={} (Attempt #{}), RTO_timeout={:.0f}ms, TimeSinceSent={}ms",
-//                        //    sentPacket.sequenceNumber, sentPacket.retries, RTO_ms, timeSinceSent.count());
-//                        it++;
-//                    }
-//                    else {
-//                        // Corrected Logging:
-//                        RF_NETWORK_ERROR("Packet Seq={} EXCEEDED MAX RETRIES ({}). Dropping packet. Consider connection unstable.",
-//                            sentPacket.sequenceNumber, maxRetries);
-//                        it = connectionState.unacknowledgedSentPackets.erase(it);
-//                    }
-//                }
-//                else {
-//                    it++;
-//                }
-//            }
-//            // if (!packetsToResend.empty()) {
-//            //    RF_NETWORK_TRACE("Found {} packets to retransmit.", packetsToResend.size());
-//            // }
-//            return packetsToResend;
-//        }
-//
-//    } // namespace Networking
-//} // namespace RiftForged
-
-// File: NetworkEngine/UDPReliabilityProtocol.cpp
+﻿// File: NetworkEngine/UDPReliabilityProtocol.cpp
 // RiftForged Game Engine
 // Copyright (C) 2022-2028 RiftForged Team
 
@@ -322,6 +9,7 @@
 #include <vector>            // For std::vector in PrepareOutgoingPacket
 #include <list>              // For std::list in ReliableConnectionState
 #include <chrono>            // For time points
+#include <mutex>
 //
 namespace RiftForged {
     namespace Networking {
@@ -338,6 +26,8 @@ namespace RiftForged {
                         uint16_t payloadSize,
                         uint8_t packetFlags
                     ) {
+                        std::lock_guard<std::mutex> lock(connectionState.internalStateMutex); // <<< LOCK HERE
+
                         if (!HasFlag(packetFlags, GamePacketFlag::IS_ACK_ONLY) && payloadSize > 0 && payloadData == nullptr) {
                             // Corrected Logging:
                             RF_NETWORK_WARN("PrepareOutgoingPacket: Payload data is null for a non-ACK-only packet with payload size > 0. Type: {}", static_cast<uint16_t>(messageType));
@@ -383,7 +73,7 @@ namespace RiftForged {
                                 HasFlag(packetFlags, GamePacketFlag::IS_ACK_ONLY)
                             );
                             // Corrected Logging (if uncommented):
-                            // RF_NETWORK_TRACE("Queued reliable packet Seq: {} for ACK. Unacked count: {}", 
+                             //RF_NETWORK_TRACE("Queued reliable packet Seq: {} for ACK. Unacked count: {}", 
                             //    header.sequenceNumber, connectionState.unacknowledgedSentPackets.size());
                         }
             
@@ -403,6 +93,8 @@ namespace RiftForged {
             const uint8_t** out_payloadToProcess,
             uint16_t* out_payloadSize
         ) {
+            std::lock_guard<std::mutex> lock(connectionState.internalStateMutex); // <<< LOCK HERE
+
             if (out_payloadToProcess) *out_payloadToProcess = nullptr;
             if (out_payloadSize) *out_payloadSize = 0;
 
@@ -457,9 +149,50 @@ namespace RiftForged {
                         // This log was in your original, keeping it:
                         RF_NETWORK_TRACE("Our sent packet Seq=%u was ACKNOWLEDGED by remote. Removing.", sentPacket.sequenceNumber);
                         actualAckedCountThisPass++;
-                        // TODO: Update RTT estimations here
-                        // e.g., auto rtt = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - sentPacket.timeSent);
-                        // connectionState.RecordRTT(rtt.count());
+                        // +++ START RTT SAMPLING AND RTO UPDATE +++
+                        if (sentPacket.retries == 0) { // Karn's Algorithm: Only sample RTT for non-retransmitted packets
+                            float rtt_sample_ms = static_cast<float>(
+                                std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    std::chrono::steady_clock::now() - sentPacket.timeSent
+                                ).count()
+                                );
+
+                            RF_NETWORK_TRACE("RTT Sample for Seq %u: %.2f ms", sentPacket.sequenceNumber, rtt_sample_ms);
+
+                            if (connectionState.isFirstRTTSample) {
+                                connectionState.smoothedRTT_ms = rtt_sample_ms;
+                                // Per RFC 6298: RTTVAR is RTT/2 for the first sample
+                                connectionState.rttVariance_ms = rtt_sample_ms / 2.0f;
+                                connectionState.isFirstRTTSample = false;
+                                RF_NETWORK_TRACE("RTT Update (First Sample): SRTT=%.2fms, RTTVAR=%.2fms",
+                                    connectionState.smoothedRTT_ms, connectionState.rttVariance_ms);
+                            }
+                            else {
+                                // Using std::abs from <cmath>
+                                float delta = std::abs(connectionState.smoothedRTT_ms - rtt_sample_ms);
+                                // RFC 6298: RTTVAR <- (1-beta)*RTTVAR + beta*|SRTT - R'|
+                                connectionState.rttVariance_ms = (1.0f - RTT_BETA) * connectionState.rttVariance_ms + RTT_BETA * delta;
+                                // RFC 6298: SRTT <- (1-alpha)*SRTT + alpha*R'
+                                connectionState.smoothedRTT_ms = (1.0f - RTT_ALPHA) * connectionState.smoothedRTT_ms + RTT_ALPHA * rtt_sample_ms;
+                                RF_NETWORK_TRACE("RTT Update (Subsequent): SRTT=%.2fms, RTTVAR=%.2fms (Delta=%.2fms)",
+                                    connectionState.smoothedRTT_ms, connectionState.rttVariance_ms, delta);
+                            }
+
+                            // Recalculate RTO: SRTT + K * RTTVAR
+                            // Note: RFC6298 suggests RTO = SRTT + max(G, K*RTTVAR), where G is clock granularity.
+                            // We simplify by G being implicitly covered or small enough.
+                            connectionState.retransmissionTimeout_ms = connectionState.smoothedRTT_ms + RTO_K * connectionState.rttVariance_ms;
+
+                            // Clamp RTO to min/max bounds (using std::min/max from <algorithm>)
+                            connectionState.retransmissionTimeout_ms = std::max(MIN_RTO_MS, connectionState.retransmissionTimeout_ms);
+                            connectionState.retransmissionTimeout_ms = std::min(MAX_RTO_MS, connectionState.retransmissionTimeout_ms);
+
+                            RF_NETWORK_INFO("RTO Updated for connection: %.2f ms (SRTT: %.2f, RTTVAR: %.2f)",
+                                connectionState.retransmissionTimeout_ms,
+                                connectionState.smoothedRTT_ms,
+                                connectionState.rttVariance_ms);
+                        }
+                        // +++ END RTT SAMPLING AND RTO UPDATE +++GetPacketsForRetransmission
                         return true; // Remove from list
                     }
                     return false; // Keep in list
@@ -471,6 +204,7 @@ namespace RiftForged {
                     actualAckedCountThisPass, connectionState.unacknowledgedSentPackets.size(), preAckRemovalCount);
             }
             else if (preAckRemovalCount > 0 && (remoteAckNum > 0 || remoteAckBits > 0)) {
+//                  GetPacketsForRetransmission;
                 RF_NETWORK_TRACE("ACK PROC: No packets ACKed this pass. RemoteAckNum=%u, RemoteAckBits=0x%08X. Unacked count remains %zu.",
                     remoteAckNum, remoteAckBits, connectionState.unacknowledgedSentPackets.size());
             }
@@ -596,30 +330,44 @@ namespace RiftForged {
         std::vector<std::vector<uint8_t>> GetPacketsForRetransmission(
             ReliableConnectionState& connectionState,
             std::chrono::steady_clock::time_point currentTime,
-            float RTO_ms,
             int maxRetries
         ) {
             // Your existing implementation from prompt 4
+            
             std::vector<std::vector<uint8_t>> packetsToResend;
+
+            std::lock_guard<std::mutex> lock(connectionState.internalStateMutex); // <<< LOCK HERE
+
             auto it = connectionState.unacknowledgedSentPackets.begin();
+
             while (it != connectionState.unacknowledgedSentPackets.end()) {
                 ReliableConnectionState::SentPacketInfo& sentPacket = *it;
                 auto timeSinceSent = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - sentPacket.timeSent);
 
-                if (timeSinceSent.count() >= static_cast<long long>(RTO_ms)) {
+                if (timeSinceSent.count() >= static_cast<long long>(connectionState.retransmissionTimeout_ms)) {
+                    connectionState.retransmissionTimeout_ms = std::min(connectionState.retransmissionTimeout_ms * 2.0f, MAX_RTO_MS);
+                    connectionState.retransmissionTimeout_ms = std::max(connectionState.retransmissionTimeout_ms, MIN_RTO_MS);
+                    RF_NETWORK_WARN("RTO Backoff: Packet Seq=%u timed out. New RTO for connection: %.2f ms",
+                        sentPacket.sequenceNumber, connectionState.retransmissionTimeout_ms);
+
                     if (sentPacket.retries < maxRetries) {
                         sentPacket.retries++;
-                        sentPacket.timeSent = currentTime; // Update timeSent for the next RTO calculation
-                        packetsToResend.push_back(sentPacket.packetData); // Resend the original packet data
-                        RF_NETWORK_WARN("RETRANSMIT: Packet Seq=%u (Attempt #%d). RTO: %.0fms, TimeSinceLastSent: %lldms",
-                            sentPacket.sequenceNumber, sentPacket.retries, RTO_ms, timeSinceSent.count());
+                        sentPacket.timeSent = currentTime;
+                        packetsToResend.push_back(sentPacket.packetData);
+
+                        RF_NETWORK_WARN("RETRANSMIT: Packet Seq=%u (Attempt #%d). RTO used: %.0fms, TimeSinceLastSent: %lldms. Connection RTO now: %.0fms",
+                            sentPacket.sequenceNumber, sentPacket.retries,
+                            connectionState.retransmissionTimeout_ms,
+                            timeSinceSent.count(),
+                            connectionState.retransmissionTimeout_ms);
                         it++;
                     }
                     else {
-                        RF_NETWORK_ERROR("MAX RETRIES: Packet Seq=%u EXCEEDED MAX RETRIES (%d). Dropping packet. Consider connection unstable.",
-                            sentPacket.sequenceNumber, maxRetries);
-                        // TODO: Notify GameServerEngine about this connection being potentially dead/unstable.
-                        // GameServerEngine might then decide to tear down the ReliableConnectionState and Player session.
+                        RF_NETWORK_ERROR("MAX RETRIES: Packet Seq=%u EXCEEDED MAX RETRIES (%d). RTO used: %.0fms. Dropping packet and flagging connection as lost.",
+                            sentPacket.sequenceNumber, maxRetries, connectionState.retransmissionTimeout_ms);
+
+                        connectionState.connectionDroppedByMaxRetries = true;
+
                         it = connectionState.unacknowledgedSentPackets.erase(it); // Remove from list
                     }
                 }

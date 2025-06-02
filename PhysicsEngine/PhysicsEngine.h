@@ -15,7 +15,7 @@
 #include <vector>   
 #include <string>
 #include <mutex>
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h"
 #include "../Utils/Logger.h"
 #include "../Utils/MathUtil.h"
 #include "../PhysicsEngine/PhysicsTypes.h" // Ensure this path is correct
@@ -189,7 +189,7 @@ namespace RiftForged {
             physx::PxDefaultCpuDispatcher* m_dispatcher = nullptr;
             physx::PxScene* m_scene = nullptr;
             physx::PxMaterial* m_default_material = nullptr;
-            // physx::PxCooking* m_cooking = nullptr; // REMOVED
+            physx::PxQueryFilterData m_default_query_filter_data; 
             physx::PxControllerManager* m_controller_manager = nullptr;
             std::map<uint64_t, physx::PxController*> m_playerControllers;
             mutable std::mutex m_playerControllersMutex;

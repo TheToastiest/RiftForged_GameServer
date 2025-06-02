@@ -5,9 +5,9 @@
 
 #include "BasicAttackMessageHandler.h"
 
-// FlatBuffers (V0.0.3)
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"    // For Vec3, DamageInstance, Enums
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h"    // For S2C_CombatEventMsg builders etc.
+// FlatBuffers (V0.0.4)
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h"    // For Vec3, DamageInstance, Enums
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h"    // For S2C_CombatEventMsg builders etc.
 // C2S messages included via BasicAttackMessageHandler.h or directly if preferred
 
 // Project specific

@@ -1,23 +1,19 @@
-﻿// PlayerManager.h
-// RiftForged Gaming
-// Copyright 2023 RiftForged
+﻿// File: Gameplay/PlayerManager.h (Refactored)
+// RiftForged Game Development Team
+// Copyright (c) 2023-2025 RiftForged Game Development Team
 
 #pragma once
 
 #include <cstdint>
-#include <string>
 #include <map>
 #include <vector>
-#include <mutex>    // For std::mutex and std::lock_guard
-#include <optional> // For FindPlayerBy... returning an optional pointer or wrapped result
+#include <mutex>
+#include <memory> // For std::unique_ptr
 #include <atomic>
-#include <functional>
 
-
-// Adjust paths as necessary for your project structure
 #include "ActivePlayer.h" // For RiftForged::GameLogic::ActivePlayer
-#include "../NetworkEngine/NetworkEndpoint.h" // For RiftForged::Networking::NetworkEndpoint
-#include "../Utils/Logger.h" // For SpdLog macros
+// #include "../NetworkEngine/NetworkEndpoint.h" // <<< REMOVED
+#include "../Utils/Logger.h"
 
 namespace RiftForged {
     namespace GameLogic {
@@ -27,56 +23,45 @@ namespace RiftForged {
             PlayerManager();
             ~PlayerManager();
 
-            // Prevent copying and assignment
             PlayerManager(const PlayerManager&) = delete;
             PlayerManager& operator=(const PlayerManager&) = delete;
 
-            // Gets an existing player for the endpoint or creates a new one.
-            // Returns a raw pointer to the ActivePlayer object stored in the manager.
-            // The PlayerManager owns the ActivePlayer objects.
-            ActivePlayer* GetOrCreatePlayer(
-                const RiftForged::Networking::NetworkEndpoint& endpoint,
-                bool& out_was_newly_created
+            // Creates a new player instance. Called by GameServerEngine after a playerId is assigned.
+            // GameServerEngine is responsible for linking this playerId to a NetworkEndpoint.
+            ActivePlayer* CreatePlayer(
+                uint64_t playerId,
+                const RiftForged::Networking::Shared::Vec3& startPos,
+                const RiftForged::Networking::Shared::Quaternion& startOrientation,
+                float cap_radius = 0.5f, float cap_half_height = 0.9f
             );
 
+            // Removes a player by their unique PlayerID.
+            // Returns true if player was found and removed, false otherwise.
+            // Pre-removal logic (saving state, notifying systems) should be handled by GameServerEngine
+            // before calling this, or via callbacks/observers if PlayerManager needs to signal.
+            bool RemovePlayer(uint64_t playerId);
+
             // Finds a player by their unique PlayerID.
-            ActivePlayer* FindPlayerById(uint64_t playerId);
+            ActivePlayer* FindPlayerById(uint64_t playerId) const; // Made const
 
-            // Finds a player by their network endpoint.
-            ActivePlayer* FindPlayerByEndpoint(const RiftForged::Networking::NetworkEndpoint& endpoint);
+            // Gets a list of pointers to all active player objects for iteration.
+            // The returned pointers are valid as long as the PlayerManager is not modified
+            // (players added/removed) concurrently without proper synchronization by the caller.
+            // Consider returning a copy of shared_ptrs or a list of IDs if stricter safety across threads is needed by GameServerEngine.
+            std::vector<ActivePlayer*> GetAllActivePlayerPointersForUpdate(); // Non-const if internal iteration needs non-const access for some reason. Usually const.
+            // Let's make it const for now, assuming read-only iteration for update gathering.
+            std::vector<const ActivePlayer*> GetAllActivePlayerPointersForUpdate() const;
 
-            // Removes a player, e.g., on disconnect or timeout.
-            void RemovePlayerByEndpoint(const RiftForged::Networking::NetworkEndpoint& endpoint);
-            void RemovePlayerById(uint64_t playerId);
 
-            // Gets a list of all currently active client network endpoints.
-            // Useful for broadcasting messages via UDPSocketAsync.
-            std::vector<RiftForged::Networking::NetworkEndpoint> GetAllActiveClientEndpoints() const;
-
-            // Gets a list of pointers to all active player objects.
-            // Useful for GameServerEngine's SimulationTick to update/read player states.
-            // The caller must be careful with the lifetime of these pointers if players can be removed concurrently.
-            std::vector<ActivePlayer*> GetAllActivePlayerPointersForUpdate();
-
-            // ***** ADDED FOR PROJECTILE ID *****
+            uint64_t GetNextAvailablePlayerID();    // Utility for GameServerEngine to assign new IDs
             uint64_t GetNextAvailableProjectileID();
-            // **********************************
 
         private:
-            // Map from endpoint string key (IP:Port) to the ActivePlayer object.
-            // Using the object directly in the map simplifies ownership.
-            std::map<std::string, ActivePlayer> m_activePlayersByEndpointKey;
+            std::map<uint64_t, std::unique_ptr<ActivePlayer>> m_playersById;
 
-            // Map from PlayerID to a raw pointer to the ActivePlayer object in the above map.
-            // This provides fast lookup by ID. Pointers are non-owning here.
-            std::map<uint64_t, ActivePlayer*> m_playerPtrsById;
-
-            // ***** ADDED FOR PROJECTILE ID *****
+            std::atomic<uint64_t> m_nextPlayerId;
             std::atomic<uint64_t> m_nextProjectileId;
-            // **********************************
-
-            uint64_t m_nextPlayerId; // Simple counter for assigning unique PlayerIDs
-            mutable std::mutex m_playerMapMutex; // Mutex to protect access to the player maps
+            mutable std::mutex m_playerMapMutex; // Protects m_playersById map
         };
 
     } // namespace GameLogic

@@ -2,9 +2,9 @@
 #include "RiftStepMessageHandler.h" 
 
 // FlatBuffers (V0.0.3)
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h"  // For C2S_RiftStepActivationMsg
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h"  // For S2C_RiftStepInitiatedMsg builders etc.
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h" // For Vec3, StatusEffectCategory etc.
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h"  // For C2S_RiftStepActivationMsg
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h"  // For S2C_RiftStepInitiatedMsg builders etc.
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h" // For Vec3, StatusEffectCategory etc.
 
 #include "../Gameplay/ActivePlayer.h"    // <<< ADDED: For ActivePlayer full definition
 #include "../Gameplay/GameplayEngine.h"  // For m_gameplayEngine

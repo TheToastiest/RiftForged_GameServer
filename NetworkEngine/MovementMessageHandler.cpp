@@ -6,9 +6,9 @@
 #include "MovementMessageHandler.h" // Includes NetworkCommon.h, NetworkEndpoint.h
 
 // <<< MODIFIED: Ensure these are V0.0.3 and paths are correct >>>
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h"  // Defines C2S_MovementInputMsg
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"    // For Vec3
-// #include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h" // Not strictly needed here unless creating S2C messages directly in this handler
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h"  // Defines C2S_MovementInputMsg
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h"    // For Vec3
+// #include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // Not strictly needed here unless creating S2C messages directly in this handler
 
 #include "../Utils/Logger.h"                                           //
 #include "../Gameplay/GameplayEngine.h"                                // For m_gameplayEngine

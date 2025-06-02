@@ -44,6 +44,10 @@ struct C2S_PingMsg;
 struct C2S_PingMsgBuilder;
 struct C2S_PingMsgT;
 
+struct C2S_JoinRequestMsg;
+struct C2S_JoinRequestMsgBuilder;
+struct C2S_JoinRequestMsgT;
+
 struct Root_C2S_UDP_Message;
 struct Root_C2S_UDP_MessageBuilder;
 struct Root_C2S_UDP_MessageT;
@@ -95,11 +99,12 @@ enum C2S_UDP_Payload : uint8_t {
   C2S_UDP_Payload_BasicAttackIntent = 4,
   C2S_UDP_Payload_UseAbility = 5,
   C2S_UDP_Payload_Ping = 6,
+  C2S_UDP_Payload_JoinRequest = 7,
   C2S_UDP_Payload_MIN = C2S_UDP_Payload_NONE,
-  C2S_UDP_Payload_MAX = C2S_UDP_Payload_Ping
+  C2S_UDP_Payload_MAX = C2S_UDP_Payload_JoinRequest
 };
 
-inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[7] {
+inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[8] {
   static const C2S_UDP_Payload values[] = {
     C2S_UDP_Payload_NONE,
     C2S_UDP_Payload_MovementInput,
@@ -107,13 +112,14 @@ inline const C2S_UDP_Payload (&EnumValuesC2S_UDP_Payload())[7] {
     C2S_UDP_Payload_RiftStepActivation,
     C2S_UDP_Payload_BasicAttackIntent,
     C2S_UDP_Payload_UseAbility,
-    C2S_UDP_Payload_Ping
+    C2S_UDP_Payload_Ping,
+    C2S_UDP_Payload_JoinRequest
   };
   return values;
 }
 
 inline const char * const *EnumNamesC2S_UDP_Payload() {
-  static const char * const names[8] = {
+  static const char * const names[9] = {
     "NONE",
     "MovementInput",
     "TurnIntent",
@@ -121,13 +127,14 @@ inline const char * const *EnumNamesC2S_UDP_Payload() {
     "BasicAttackIntent",
     "UseAbility",
     "Ping",
+    "JoinRequest",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameC2S_UDP_Payload(C2S_UDP_Payload e) {
-  if (::flatbuffers::IsOutRange(e, C2S_UDP_Payload_NONE, C2S_UDP_Payload_Ping)) return "";
+  if (::flatbuffers::IsOutRange(e, C2S_UDP_Payload_NONE, C2S_UDP_Payload_JoinRequest)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesC2S_UDP_Payload()[index];
 }
@@ -160,6 +167,10 @@ template<> struct C2S_UDP_PayloadTraits<RiftForged::Networking::UDP::C2S::C2S_Pi
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_Ping;
 };
 
+template<> struct C2S_UDP_PayloadTraits<RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsg> {
+  static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_JoinRequest;
+};
+
 template<typename T> struct C2S_UDP_PayloadUnionTraits {
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_NONE;
 };
@@ -186,6 +197,10 @@ template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C
 
 template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C2S_PingMsgT> {
   static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_Ping;
+};
+
+template<> struct C2S_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT> {
+  static const C2S_UDP_Payload enum_value = C2S_UDP_Payload_JoinRequest;
 };
 
 struct C2S_UDP_PayloadUnion {
@@ -265,6 +280,14 @@ struct C2S_UDP_PayloadUnion {
   const RiftForged::Networking::UDP::C2S::C2S_PingMsgT *AsPing() const {
     return type == C2S_UDP_Payload_Ping ?
       reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_PingMsgT *>(value) : nullptr;
+  }
+  RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT *AsJoinRequest() {
+    return type == C2S_UDP_Payload_JoinRequest ?
+      reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT *>(value) : nullptr;
+  }
+  const RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT *AsJoinRequest() const {
+    return type == C2S_UDP_Payload_JoinRequest ?
+      reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT *>(value) : nullptr;
   }
 };
 
@@ -696,6 +719,81 @@ inline ::flatbuffers::Offset<C2S_PingMsg> CreateC2S_PingMsg(
 
 ::flatbuffers::Offset<C2S_PingMsg> CreateC2S_PingMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_PingMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct C2S_JoinRequestMsgT : public ::flatbuffers::NativeTable {
+  typedef C2S_JoinRequestMsg TableType;
+  uint64_t client_timestamp_ms = 0;
+  std::string character_id_to_load{};
+};
+
+struct C2S_JoinRequestMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef C2S_JoinRequestMsgT NativeTableType;
+  typedef C2S_JoinRequestMsgBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_CLIENT_TIMESTAMP_MS = 4,
+    VT_CHARACTER_ID_TO_LOAD = 6
+  };
+  uint64_t client_timestamp_ms() const {
+    return GetField<uint64_t>(VT_CLIENT_TIMESTAMP_MS, 0);
+  }
+  const ::flatbuffers::String *character_id_to_load() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_CHARACTER_ID_TO_LOAD);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_CLIENT_TIMESTAMP_MS, 8) &&
+           VerifyOffset(verifier, VT_CHARACTER_ID_TO_LOAD) &&
+           verifier.VerifyString(character_id_to_load()) &&
+           verifier.EndTable();
+  }
+  C2S_JoinRequestMsgT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(C2S_JoinRequestMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<C2S_JoinRequestMsg> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_JoinRequestMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct C2S_JoinRequestMsgBuilder {
+  typedef C2S_JoinRequestMsg Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_client_timestamp_ms(uint64_t client_timestamp_ms) {
+    fbb_.AddElement<uint64_t>(C2S_JoinRequestMsg::VT_CLIENT_TIMESTAMP_MS, client_timestamp_ms, 0);
+  }
+  void add_character_id_to_load(::flatbuffers::Offset<::flatbuffers::String> character_id_to_load) {
+    fbb_.AddOffset(C2S_JoinRequestMsg::VT_CHARACTER_ID_TO_LOAD, character_id_to_load);
+  }
+  explicit C2S_JoinRequestMsgBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<C2S_JoinRequestMsg> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<C2S_JoinRequestMsg>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<C2S_JoinRequestMsg> CreateC2S_JoinRequestMsg(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t client_timestamp_ms = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> character_id_to_load = 0) {
+  C2S_JoinRequestMsgBuilder builder_(_fbb);
+  builder_.add_client_timestamp_ms(client_timestamp_ms);
+  builder_.add_character_id_to_load(character_id_to_load);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<C2S_JoinRequestMsg> CreateC2S_JoinRequestMsgDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t client_timestamp_ms = 0,
+    const char *character_id_to_load = nullptr) {
+  auto character_id_to_load__ = character_id_to_load ? _fbb.CreateString(character_id_to_load) : 0;
+  return RiftForged::Networking::UDP::C2S::CreateC2S_JoinRequestMsg(
+      _fbb,
+      client_timestamp_ms,
+      character_id_to_load__);
+}
+
+::flatbuffers::Offset<C2S_JoinRequestMsg> CreateC2S_JoinRequestMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_JoinRequestMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct Root_C2S_UDP_MessageT : public ::flatbuffers::NativeTable {
   typedef Root_C2S_UDP_Message TableType;
   RiftForged::Networking::UDP::C2S::C2S_UDP_PayloadUnion payload{};
@@ -733,6 +831,9 @@ struct Root_C2S_UDP_Message FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Tab
   const RiftForged::Networking::UDP::C2S::C2S_PingMsg *payload_as_Ping() const {
     return payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_Ping ? static_cast<const RiftForged::Networking::UDP::C2S::C2S_PingMsg *>(payload()) : nullptr;
   }
+  const RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsg *payload_as_JoinRequest() const {
+    return payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_JoinRequest ? static_cast<const RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsg *>(payload()) : nullptr;
+  }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint8_t>(verifier, VT_PAYLOAD_TYPE, 1) &&
@@ -767,6 +868,10 @@ template<> inline const RiftForged::Networking::UDP::C2S::C2S_UseAbilityMsg *Roo
 
 template<> inline const RiftForged::Networking::UDP::C2S::C2S_PingMsg *Root_C2S_UDP_Message::payload_as<RiftForged::Networking::UDP::C2S::C2S_PingMsg>() const {
   return payload_as_Ping();
+}
+
+template<> inline const RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsg *Root_C2S_UDP_Message::payload_as<RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsg>() const {
+  return payload_as_JoinRequest();
 }
 
 struct Root_C2S_UDP_MessageBuilder {
@@ -1027,6 +1132,35 @@ inline ::flatbuffers::Offset<C2S_PingMsg> CreateC2S_PingMsg(::flatbuffers::FlatB
       _client_timestamp_ms);
 }
 
+inline C2S_JoinRequestMsgT *C2S_JoinRequestMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<C2S_JoinRequestMsgT>(new C2S_JoinRequestMsgT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void C2S_JoinRequestMsg::UnPackTo(C2S_JoinRequestMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = client_timestamp_ms(); _o->client_timestamp_ms = _e; }
+  { auto _e = character_id_to_load(); if (_e) _o->character_id_to_load = _e->str(); }
+}
+
+inline ::flatbuffers::Offset<C2S_JoinRequestMsg> C2S_JoinRequestMsg::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_JoinRequestMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateC2S_JoinRequestMsg(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<C2S_JoinRequestMsg> CreateC2S_JoinRequestMsg(::flatbuffers::FlatBufferBuilder &_fbb, const C2S_JoinRequestMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const C2S_JoinRequestMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _client_timestamp_ms = _o->client_timestamp_ms;
+  auto _character_id_to_load = _o->character_id_to_load.empty() ? 0 : _fbb.CreateString(_o->character_id_to_load);
+  return RiftForged::Networking::UDP::C2S::CreateC2S_JoinRequestMsg(
+      _fbb,
+      _client_timestamp_ms,
+      _character_id_to_load);
+}
+
 inline Root_C2S_UDP_MessageT *Root_C2S_UDP_Message::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<Root_C2S_UDP_MessageT>(new Root_C2S_UDP_MessageT());
   UnPackTo(_o.get(), _resolver);
@@ -1085,6 +1219,10 @@ inline bool VerifyC2S_UDP_Payload(::flatbuffers::Verifier &verifier, const void 
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_PingMsg *>(obj);
       return verifier.VerifyTable(ptr);
     }
+    case C2S_UDP_Payload_JoinRequest: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsg *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
     default: return true;
   }
 }
@@ -1128,6 +1266,10 @@ inline void *C2S_UDP_PayloadUnion::UnPack(const void *obj, C2S_UDP_Payload type,
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_PingMsg *>(obj);
       return ptr->UnPack(resolver);
     }
+    case C2S_UDP_Payload_JoinRequest: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsg *>(obj);
+      return ptr->UnPack(resolver);
+    }
     default: return nullptr;
   }
 }
@@ -1159,6 +1301,10 @@ inline ::flatbuffers::Offset<void> C2S_UDP_PayloadUnion::Pack(::flatbuffers::Fla
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_PingMsgT *>(value);
       return CreateC2S_PingMsg(_fbb, ptr, _rehasher).Union();
     }
+    case C2S_UDP_Payload_JoinRequest: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT *>(value);
+      return CreateC2S_JoinRequestMsg(_fbb, ptr, _rehasher).Union();
+    }
     default: return 0;
   }
 }
@@ -1187,6 +1333,10 @@ inline C2S_UDP_PayloadUnion::C2S_UDP_PayloadUnion(const C2S_UDP_PayloadUnion &u)
     }
     case C2S_UDP_Payload_Ping: {
       value = new RiftForged::Networking::UDP::C2S::C2S_PingMsgT(*reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_PingMsgT *>(u.value));
+      break;
+    }
+    case C2S_UDP_Payload_JoinRequest: {
+      value = new RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT(*reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT *>(u.value));
       break;
     }
     default:
@@ -1223,6 +1373,11 @@ inline void C2S_UDP_PayloadUnion::Reset() {
     }
     case C2S_UDP_Payload_Ping: {
       auto ptr = reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_PingMsgT *>(value);
+      delete ptr;
+      break;
+    }
+    case C2S_UDP_Payload_JoinRequest: {
+      auto ptr = reinterpret_cast<RiftForged::Networking::UDP::C2S::C2S_JoinRequestMsgT *>(value);
       delete ptr;
       break;
     }

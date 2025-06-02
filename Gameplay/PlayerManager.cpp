@@ -1,173 +1,121 @@
-﻿// PlayerManager.cpp
-// RiftForged Gaming
-// Copyright 2025-2028 RiftForged
+﻿// File: Gameplay/PlayerManager.cpp (Refactored)
+// RiftForged Game Development Team
+// Copyright (c) 2023-2025 RiftForged Game Development Team
 
 #include "PlayerManager.h"
-// Logger is included via PlayerManager.h -> Utilities/Logger.h
+#include "../Gameplay/ActivePlayer.h" // Ensure ActivePlayer.h doesn't include NetworkEndpoint
+
+// Logger is included via PlayerManager.h
 
 namespace RiftForged {
     namespace GameLogic {
 
-        PlayerManager::PlayerManager() : m_nextPlayerId(1) { // Player IDs start from 1
-            RF_PLAYERMGR_INFO("PlayerManager: Initialized.");
+        PlayerManager::PlayerManager()
+            : m_nextPlayerId(1), // Player IDs start from 1
+            m_nextProjectileId(1) {
+            RF_GAMELOGIC_INFO("PlayerManager: Initialized."); // Changed log scope
         }
 
         PlayerManager::~PlayerManager() {
-            RF_PLAYERMGR_INFO("PlayerManager: Shutting down. Clearing {} active players.", m_activePlayersByEndpointKey.size());
             std::lock_guard<std::mutex> lock(m_playerMapMutex);
-            m_playerPtrsById.clear();
-            m_activePlayersByEndpointKey.clear();
-            // ActivePlayer objects are destroyed when m_activePlayersByEndpointKey is cleared.
+            RF_GAMELOGIC_INFO("PlayerManager: Shutting down. Clearing {} active players.", m_playersById.size());
+            m_playersById.clear(); // std::unique_ptr will handle deletion of ActivePlayer objects
         }
 
-        ActivePlayer* PlayerManager::GetOrCreatePlayer(
-            const RiftForged::Networking::NetworkEndpoint& endpoint,
-            bool& out_was_newly_created
-        )
-        { //
-            out_was_newly_created = false; // Initialize to false
+        ActivePlayer* PlayerManager::CreatePlayer(
+            uint64_t playerId,
+            const RiftForged::Networking::Shared::Vec3& startPos,
+            const RiftForged::Networking::Shared::Quaternion& startOrientation,
+            float cap_radius, float cap_half_height) {
+            std::lock_guard<std::mutex> lock(m_playerMapMutex);
 
-            if (endpoint.ipAddress.empty() || endpoint.port == 0) { //
-                RF_PLAYERMGR_CRITICAL("PlayerManager::GetOrCreatePlayer: Attempted with INVALID endpoint: {}", endpoint.ToString()); //
-                return nullptr;
+            if (m_playersById.count(playerId)) {
+                RF_GAMELOGIC_WARN("PlayerManager::CreatePlayer: Attempted to create player with existing ID {}.", playerId);
+                return m_playersById.at(playerId).get(); // Return existing if duplicate ID somehow assigned
             }
 
+            RF_GAMELOGIC_INFO("PlayerManager: Creating New Player. ID: {}", playerId);
 
-            std::string endpointKey = endpoint.ToString();
-            std::lock_guard<std::mutex> lock(m_playerMapMutex); // Protect map access
+            // ActivePlayer constructor no longer takes NetworkEndpoint
+            auto newPlayer = std::make_unique<ActivePlayer>(
+                playerId,
+                startPos,
+                startOrientation,
+                cap_radius,
+                cap_half_height
+            );
 
-            auto it = m_activePlayersByEndpointKey.find(endpointKey);
-            if (it == m_activePlayersByEndpointKey.end()) {
-                // Player not found, create a new one
-                out_was_newly_created = true; // <<< SET THE FLAG HERE
-                uint64_t newPlayerId = m_nextPlayerId++;
-                RF_PLAYERMGR_INFO("PlayerManager: CREATING New Player. ID: {}, EndpointKey: [{}]", newPlayerId, endpointKey);
+            ActivePlayer* newPlayerPtr = newPlayer.get();
+            m_playersById[playerId] = std::move(newPlayer);
 
-                // Emplace directly into the map (C++17, or use try_emplace)
-                // The ActivePlayer constructor (from response #135) takes (pId, endpoint, startPos, startOrientation)
-                auto emplace_result = m_activePlayersByEndpointKey.emplace(
-                    std::piecewise_construct,
-                    std::forward_as_tuple(endpointKey), // Arguments for map's key (std::string)
-                    std::forward_as_tuple(              // Arguments for map's value (ActivePlayer)
-                        newPlayerId,
-                        endpoint,                       // Pass the NetworkEndpoint object
-                        RiftForged::Networking::Shared::Vec3{ 0.0f, 0.0f, 0.0f }, // Default startPos
-                        RiftForged::Networking::Shared::Quaternion{ 0.0f, 0.0f, 0.0f, 1.0f } // Default startOrientation (identity)
-                    )
-                );
+            // Initial state loading or other game-logic specific setup for the new ActivePlayer
+            // could happen here or be triggered by GameServerEngine after this call.
+            // Example: newPlayerPtr->InitializeDefaultStats();
+            // Example: newPlayerPtr->LoadPersistentData(m_someDatabaseService); // If PM has DB access
 
-                if (!emplace_result.second) {
-                    RF_PLAYERMGR_CRITICAL("PlayerManager: Failed to emplace new player for endpoint key [{}]. This should not happen if find failed.", endpointKey);
-                    // This case (find fails but emplace fails) is highly unlikely for std::map unless out of memory.
-                    return nullptr;
-                }
+            return newPlayerPtr;
+        }
 
-                ActivePlayer* newPlayerPtr = &(emplace_result.first->second); // Get pointer to the emplaced ActivePlayer object
-                m_playerPtrsById[newPlayerId] = newPlayerPtr;
+        bool PlayerManager::RemovePlayer(uint64_t playerId) {
+            std::lock_guard<std::mutex> lock(m_playerMapMutex);
 
-                // TODO: When a player is created, their initial state might need to be loaded from DragonflyDB/SQL
-                // For now, they get default ActivePlayer constructor values.
-                // Example: newPlayerPtr->LoadPersistentState(newPlayerId, m_databaseService);
-
-                return newPlayerPtr;
+            auto it = m_playersById.find(playerId);
+            if (it != m_playersById.end()) {
+                RF_GAMELOGIC_INFO("PlayerManager: Removing Player ID {}.", playerId);
+                // The ActivePlayer object will be destructed when its unique_ptr is erased.
+                // GameServerEngine should have already handled:
+                // 1. Notifying other game systems (GameplayEngine, Social, etc.)
+                // 2. Coordinating with PhysicsEngine to remove the character controller
+                // 3. Saving player's final state to DB
+                m_playersById.erase(it);
+                return true;
             }
             else {
-                // Player found
-                RF_PLAYERMGR_TRACE("PlayerManager: FOUND Existing Player. ID: {}, EndpointKey: [{}]", it->second.playerId, endpointKey);
-                return &(it->second); // Return pointer to existing ActivePlayer object
+                RF_GAMELOGIC_WARN("PlayerManager::RemovePlayer: Attempted to remove non-existent player with ID {}.", playerId);
+                return false;
             }
         }
 
-        ActivePlayer* PlayerManager::FindPlayerById(uint64_t playerId) {
+        ActivePlayer* PlayerManager::FindPlayerById(uint64_t playerId) const { // Made const
             std::lock_guard<std::mutex> lock(m_playerMapMutex);
-            auto it = m_playerPtrsById.find(playerId);
-            if (it != m_playerPtrsById.end()) {
-                return it->second; // Returns the stored raw pointer
+            auto it = m_playersById.find(playerId);
+            if (it != m_playersById.end()) {
+                return it->second.get();
             }
-            RF_PLAYERMGR_WARN("PlayerManager::FindPlayerById: Player with ID {} not found.", playerId);
+            // RF_GAMELOGIC_TRACE("PlayerManager::FindPlayerById: Player with ID {} not found.", playerId); // More of a trace
             return nullptr;
-        }
-
-        ActivePlayer* PlayerManager::FindPlayerByEndpoint(const RiftForged::Networking::NetworkEndpoint& endpoint) {
-            std::string endpointKey = endpoint.ToString();
-            std::lock_guard<std::mutex> lock(m_playerMapMutex);
-            auto it = m_activePlayersByEndpointKey.find(endpointKey);
-            if (it != m_activePlayersByEndpointKey.end()) {
-                return &(it->second); // Return pointer to ActivePlayer object in map
-            }
-            // RF_PLAYERMGR_TRACE("PlayerManager::FindPlayerByEndpoint: Player with endpoint [{}] not found.", endpointKey);
-            return nullptr;
-        }
-
-        void PlayerManager::RemovePlayerByEndpoint(const RiftForged::Networking::NetworkEndpoint& endpoint) {
-            std::string endpointKey = endpoint.ToString();
-            std::lock_guard<std::mutex> lock(m_playerMapMutex); // Protect map access
-
-            auto it = m_activePlayersByEndpointKey.find(endpointKey);
-            if (it != m_activePlayersByEndpointKey.end()) {
-                uint64_t playerIdToRemove = it->second.playerId;
-                RF_PLAYERMGR_INFO("PlayerManager: Removing Player ID {} from endpoint [{}].", playerIdToRemove, endpointKey);
-
-                m_playerPtrsById.erase(playerIdToRemove);
-                m_activePlayersByEndpointKey.erase(it); // This destructs the ActivePlayer object
-                // TODO: Save player state to DB before removal if needed.
-            }
-            else {
-                RF_PLAYERMGR_WARN("PlayerManager::RemovePlayerByEndpoint: Attempted to remove non-existent player for endpoint [{}].", endpointKey);
-            }
-        }
-
-        void PlayerManager::RemovePlayerById(uint64_t playerId) {
-            std::lock_guard<std::mutex> lock(m_playerMapMutex); // Protect map access
-
-            auto it_by_id = m_playerPtrsById.find(playerId);
-            if (it_by_id != m_playerPtrsById.end()) {
-                // Need to get the endpoint key to remove from the other map
-                // ActivePlayer* playerToRemove = it_by_id->second; // This points to an object in m_activePlayersByEndpointKey
-                // std::string endpointKeyToRemove = playerToRemove->networkEndpoint.ToString(); // Assuming ActivePlayer stores its endpoint
-
-                // Safer: Iterate to find the key if ActivePlayer doesn't store its key redundantly
-                // Or, ActivePlayer MUST store its NetworkEndpoint so we can reconstruct the key
-                // Assuming ActivePlayer.networkEndpoint is reliable:
-                std::string endpointKeyToRemove = it_by_id->second->networkEndpoint.ToString();
-
-                RF_PLAYERMGR_INFO("PlayerManager: Removing Player ID {} (endpoint key [{}]).", playerId, endpointKeyToRemove);
-
-                m_playerPtrsById.erase(it_by_id);
-                m_activePlayersByEndpointKey.erase(endpointKeyToRemove); // This destructs the ActivePlayer object
-                // TODO: Save player state to DB before removal.
-            }
-            else {
-                RF_PLAYERMGR_WARN("PlayerManager::RemovePlayerById: Attempted to remove non-existent player with ID {}.", playerId);
-            }
-        }
-
-        std::vector<RiftForged::Networking::NetworkEndpoint> PlayerManager::GetAllActiveClientEndpoints() const {
-            std::lock_guard<std::mutex> lock(m_playerMapMutex);
-            std::vector<RiftForged::Networking::NetworkEndpoint> endpoints;
-            endpoints.reserve(m_activePlayersByEndpointKey.size());
-            for (const auto& pair : m_activePlayersByEndpointKey) {
-                // pair.second is the ActivePlayer object, which contains its networkEndpoint
-                endpoints.push_back(pair.second.networkEndpoint);
-            }
-            return endpoints;
         }
 
         std::vector<ActivePlayer*> PlayerManager::GetAllActivePlayerPointersForUpdate() {
             std::lock_guard<std::mutex> lock(m_playerMapMutex);
             std::vector<ActivePlayer*> player_pointers;
-            player_pointers.reserve(m_activePlayersByEndpointKey.size());
-            for (auto& pair : m_activePlayersByEndpointKey) { // Iterate by reference to get address
-                player_pointers.push_back(&pair.second); // Get pointer to the ActivePlayer object in the map
+            player_pointers.reserve(m_playersById.size());
+            for (auto& pair : m_playersById) {
+                player_pointers.push_back(pair.second.get());
             }
             return player_pointers;
         }
 
-        // ***** ADDED DEFINITION FOR PROJECTILE ID *****
+        // Const 
+        // for read-only iteration
+        std::vector<const ActivePlayer*> PlayerManager::GetAllActivePlayerPointersForUpdate() const {
+            std::lock_guard<std::mutex> lock(m_playerMapMutex);
+            std::vector<const ActivePlayer*> player_pointers;
+            player_pointers.reserve(m_playersById.size());
+            for (const auto& pair : m_playersById) {
+                player_pointers.push_back(pair.second.get());
+            }
+            return player_pointers;
+        }
+
+
+        uint64_t PlayerManager::GetNextAvailablePlayerID() {
+            return m_nextPlayerId.fetch_add(1, std::memory_order_relaxed);
+        }
+
         uint64_t PlayerManager::GetNextAvailableProjectileID() {
             return m_nextProjectileId.fetch_add(1, std::memory_order_relaxed);
         }
-        // *********************************************
 
     } // namespace GameLogic
 } // namespace RiftForged

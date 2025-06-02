@@ -6,8 +6,8 @@
 
 #include "flatbuffers/flatbuffers.h"
 
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h" // For C2S_TurnIntentMsg
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h" // For S2C_EntityStateUpdateMsg
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h" // For C2S_TurnIntentMsg
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // For S2C_EntityStateUpdateMsg
 #include "../Gameplay/PlayerManager.h"
 
 // Forward declarations

@@ -1,5 +1,5 @@
 ﻿// File: Schemas/riftforged_common_types.fbs
-// Protocol Version: 0.0.3
+// Protocol Version: 0.0.4
 // Description: Defines common, shared data structures and enums for RiftForged networking.
 // This file is part of Riftforged.
 // Copyright (C) 2023 Riftforged

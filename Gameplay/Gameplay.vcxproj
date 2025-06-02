@@ -147,6 +147,7 @@
     <ClInclude Include="CombatSystem.h" />
     <ClInclude Include="CraftingMaterials.h" />
     <ClInclude Include="GameplayEngine.h" />
+    <ClInclude Include="GameplayStubs.h" />
     <ClInclude Include="ItemStaticData.h" />
     <ClInclude Include="ItemType.h" />
     <ClInclude Include="PlayerManager.h" />

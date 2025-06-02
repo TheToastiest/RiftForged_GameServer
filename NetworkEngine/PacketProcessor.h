@@ -1,50 +1,34 @@
-﻿// File: PacketProcessor.h (Updated)
-#pragma once
+﻿    // File: NetworkEngine/PacketProcessor.h (Ensure GameServerEngine dependency)
+    #pragma once
 
-#include <cstdint>    // For uint8_t etc.
-#include <optional>     // For std::optional
+    #include <cstdint>
+    #include <optional>
 
-#include "NetworkCommon.h"    // For S2C_Response, NetworkEndpoint
-#include "GamePacketHeader.h" // For GamePacketHeader
+    #include "NetworkCommon.h"
+    #include "GamePacketHeader.h"
+    #include "IMessageHandler.h"
 
-// Forward declarations
-namespace RiftForged {
-    namespace Networking {
-        class MessageDispatcher; //
-    }
-    namespace Gameplay {         // <<< ADDED this forward declaration
-        class GameplayEngine;    // Forward declare GameplayEngine
-    }
-    // Optional: If ProcessIncomingRawPacket or other methods in this header were to take ActivePlayer*
-    // namespace GameLogic {
-    //     class ActivePlayer;
-    // }
-}
+    namespace RiftForged {
+        namespace Networking { class MessageDispatcher; }
+        namespace Server { class GameServerEngine; } // Forward declare
+        // namespace Gameplay { class GameplayEngine; } // GameplayEngine no longer a direct dependency of PacketProcessor for this flow
 
-namespace RiftForged {
-    namespace Networking {
+        namespace Networking {
+            class PacketProcessor : public IMessageHandler {
+            public:
+                PacketProcessor(MessageDispatcher& dispatcher,
+                    RiftForged::Server::GameServerEngine& gameServerEngine); // GameServerEngine is key
 
-        class PacketProcessor {
-        public:
-            // <<< MODIFIED Constructor: Now also takes a GameplayEngine reference >>>
-            PacketProcessor(MessageDispatcher& dispatcher,
-                RiftForged::Gameplay::GameplayEngine& gameplayEngine); //
+                std::optional<S2C_Response> ProcessApplicationMessage(
+                    const NetworkEndpoint& sender_endpoint,
+                    MessageType messageId,
+                    const uint8_t* flatbuffer_payload_ptr,
+                    uint16_t flatbuffer_payload_size
+                ) override;
 
-            // This is the main entry point for processing a raw packet.
-            // It returns an optional S2C_Response.
-            std::optional<RiftForged::Networking::S2C_Response> ProcessIncomingRawPacket( //
-                const char* raw_buffer,
-                int raw_length,
-                const NetworkEndpoint& sender_endpoint
-            );
-
-        private:
-            MessageDispatcher& m_messageDispatcher; //
-            RiftForged::Gameplay::GameplayEngine& m_gameplayEngine; // <<< ADDED GameplayEngine reference member
-
-            // Potentially a reference to your ReliabilityManager if ACK processing happens here:
-            // ReliabilityManager& m_reliabilityManager; //
-        };
-
-    } // namespace Networking
-} // namespace RiftForged
+            private:
+                MessageDispatcher& m_messageDispatcher;
+                RiftForged::Server::GameServerEngine& m_gameServerEngine; // Stores GameServerEngine
+            };
+        } // namespace Networking
+    } // namespace RiftForged

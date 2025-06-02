@@ -17,7 +17,7 @@
 #include "RiftStepLogic.h" // For GameLogic::GameplayEffectInstance
 
 // Include common FlatBuffer types if directly used by definitions (e.g. StatusEffectCategory for direct application)
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h" // For Shared::StatusEffectCategory etc.
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h" // For Shared::StatusEffectCategory etc.
 
 
 namespace RiftForged {

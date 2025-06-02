@@ -1,5 +1,5 @@
 ﻿// File: Schemas/riftforged_item_definitions.fbs
-// Protocol Version: 0.0.3 (aligning with common_types)
+// Protocol Version: 0.0.4 (aligning with common_types)
 // Description: Defines the static data structures for all items in RiftForged.
 // This file is part of Riftforged.
 // Copyright (C) 2023-2025 Riftforged

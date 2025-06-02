@@ -2,7 +2,7 @@
 
 // Assuming Vec3 and Quaternion structs are in SharedProtocols/Generated/ and included there.
 // This file provides utility functions.
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h" // For Vec3 & Quaternion
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h" // For Vec3 & Quaternion
 #include <cmath> // For sqrt, sin, cos, acos
 
 // For M_PI if not defined on Windows with <cmath>
@@ -18,16 +18,18 @@ namespace RiftForged {
             using Vec3 = RiftForged::Networking::Shared::Vec3;
             using Quaternion = RiftForged::Networking::Shared::Quaternion;
             // Magnitude
-			inline float Magnitude(const Vec3& v) {
-				return std::sqrt(v.x() * v.x() + v.y() * v.y() + v.z() * v.z());
-			}
+            inline float Magnitude(const Vec3& v) {
+                return std::sqrt(v.x() * v.x() + v.y() * v.y() + v.z() * v.z());
+            }
 
+            // --- Mathematical Constants ---
             const float PI_F = static_cast<float>(M_PI);
             const float DEG_TO_RAD_FACTOR = PI_F / 180.0f;
             const float RAD_TO_DEG_FACTOR = 180.0f / PI_F;
-            const float QUATERNION_NORMALIZATION_EPSILON = 0.00001f;
-            const float VECTOR_NORMALIZATION_EPSILON = 0.00001f;
-
+            const float QUATERNION_NORMALIZATION_EPSILON = 0.00001f; // For checking if quaternion magnitude is near zero
+            const float VECTOR_NORMALIZATION_EPSILON = 0.00001f;   // For checking if vector magnitude is near zero
+            const float DEFAULT_VECTOR_CLOSE_EPSILON = 0.001f;      // Default tolerance for AreVectorsClose
+            const float DEFAULT_QUATERNION_DOT_EPSILON = 0.99999f; // Default dot product tolerance for AreQuaternionsClose
 
             // --- Vector Operations ---
 
@@ -74,6 +76,11 @@ namespace RiftForged {
             }
             // *************************************************************
 
+			// ***** NEWLY ADDED (Optional but useful): AreVectorsClose *****
+            inline bool AreVectorsClose(const Vec3& v1, const Vec3& v2, float epsilon = DEFAULT_VECTOR_CLOSE_EPSILON) {
+                return DistanceSquared(v1, v2) < (epsilon * epsilon);
+            }
+
             // ***** NEWLY ADDED (Optional but useful): Distance *****
             inline float Distance(const Vec3& v1, const Vec3& v2) {
                 return std::sqrt(DistanceSquared(v1, v2));
@@ -118,6 +125,14 @@ namespace RiftForged {
                 Quaternion q_conj(-q.x(), -q.y(), -q.z(), q.w()); // Conjugate of q
                 Quaternion result_q = MultiplyQuaternions(MultiplyQuaternions(q, p), q_conj);
                 return Vec3(result_q.x(), result_q.y(), result_q.z());
+            }
+
+            // Check if two quaternions are close (i.e., represent similar rotations)
+            inline bool AreQuaternionsClose(const Quaternion& q1, const Quaternion& q2, float dot_product_tolerance = DEFAULT_QUATERNION_DOT_EPSILON) {
+                // Dot product of two quaternions qA and qB is: ax*bx + ay*by + az*bz + aw*bw
+                float dot = q1.x() * q2.x() + q1.y() * q2.y() + q1.z() * q2.z() + q1.w() * q2.w();
+                // If abs(dot) is close to 1, the angle between them is close to 0 (or they are anti-parallel but represent same rotation).
+                return std::abs(dot) > dot_product_tolerance;
             }
 
             // Get World Forward Vector (assuming +Y is forward in local object space)

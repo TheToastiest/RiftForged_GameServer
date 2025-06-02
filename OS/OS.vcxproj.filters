@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{ddf0afb5-d09d-4c43-b464-33581a1c65e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Core">
+      <UniqueIdentifier>{d9f9dd1c-45ed-45dd-988b-9f3b4ca3883b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{4ddff1e1-b7e7-4614-bf83-6b0e6914441c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Diagnostics">
+      <UniqueIdentifier>{6bd2b71d-472e-41fb-b80e-e8068e5b48fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\IO">
+      <UniqueIdentifier>{34adc60f-2773-45a0-83f5-bff5c6b27ec6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Memory">
+      <UniqueIdentifier>{cd085f2a-ecdd-4c76-b832-d467650db68a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Network">
+      <UniqueIdentifier>{6f7170b2-e2c7-4013-a584-1415cc26d7a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Platform">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="include\Signals">
+      <UniqueIdentifier>{2d1c6bdb-154f-4ecb-950d-f7ba2feafc5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Timing">
+      <UniqueIdentifier>{054e0db1-1bdd-45bc-8ab9-33cfe7f05a2f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Threading">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="include\Network\win">
+      <UniqueIdentifier>{3c522d69-fd1f-432e-8d4c-0fcba3097cf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Network">
+      <UniqueIdentifier>{3f20f994-18e5-4630-abf9-ed0a7cdf5732}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Network\win">
+      <UniqueIdentifier>{94675b53-8962-4b31-9038-3be4567a1106}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\os_api">
+      <UniqueIdentifier>{256d3055-c8b5-4e92-98f5-c197d02e9b88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\os_api">
+      <UniqueIdentifier>{744dacbc-ed56-43cf-ae81-b618cf77b99d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\core_os">
+      <UniqueIdentifier>{d59db5b1-bbcd-4531-81ea-3f5dd4581b6f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\network\win\WinSockInitializer.h">
+      <Filter>include\Network\win</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\win\UDPSocket_Win.h">
+      <Filter>include\Network\win</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\win\Address_WIn.h">
+      <Filter>include\Network\win</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\win\NetworkError_Win.h">
+      <Filter>include\Network\win</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\win\NetworkUtils_Win.h">
+      <Filter>include\Network\win</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\win\SocketHandle_Win.h">
+      <Filter>include\Network\win</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\win\TCPSocket_Win.h">
+      <Filter>include\Network\win</Filter>
+    </ClInclude>
+    <ClInclude Include="include\os_api\OS.h">
+      <Filter>include\os_api</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core_os\NonCopyable.h">
+      <Filter>include\core_os</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core_os\platform\PlatformDetection.h">
+      <Filter>include\core_os</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core_os\Result.h">
+      <Filter>include\core_os</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core_os\Types.h">
+      <Filter>include\core_os</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\network\win\WinSockInitializer.cpp">
+      <Filter>src\Network\win</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\win\UDPSocket_Win.cpp">
+      <Filter>src\Network\win</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\win\Address_Win.cpp">
+      <Filter>src\Network\win</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\win\NetworkError_Win.cpp">
+      <Filter>src\Network\win</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\win\NetworkUtils_Win.cpp">
+      <Filter>src\Network\win</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\win\SocketHandle_Win.cpp">
+      <Filter>src\Network\win</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\win\TCPSocket_Win.cpp">
+      <Filter>src\Network\win</Filter>
+    </ClCompile>
+    <ClCompile Include="src\os_api\OS.cpp">
+      <Filter>src\os_api</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

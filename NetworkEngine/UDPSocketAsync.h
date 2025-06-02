@@ -1,21 +1,20 @@
-﻿// Description: Header file for the UDPSocketAsync class, which handles asynchronous UDP socket operations using IOCP.
-// This file includes necessary headers, defines constants, and declares the UDPSocketAsync class and its methods.
+﻿// File: UDPSocketAsync.h (Refactored for INetworkIO role)
+// Description: Header file for the UDPSocketAsync class, which handles asynchronous UDP socket operations using IOCP.
+// This class will implement the INetworkIO interface.
 // Copyright (C) 2023 RiftForged
 
 
 #pragma once
 
-#include <string>
-#include <vector>
-#include <thread>
-#include <atomic>
-#include <mutex>
-#include <deque>
-#include <map>
-#include <memory> // For std::unique_ptr
-//#include <functional> // Only if you decide to use std::function for callbacks later
+#include <string>           // <<< KEEP
+#include <vector>           // <<< KEEP
+#include <thread>           // <<< KEEP
+#include <atomic>           // <<< KEEP
+#include <mutex>            // <<< KEEP
+#include <deque>            // <<< KEEP
+#include <memory>           // <<< KEEP (For std::unique_ptr)
 
-// Winsock specific includes
+// Winsock specific includes // <<< KEEP ALL WINSOCK RELATED
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -24,125 +23,60 @@
 #include <Ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
 
-// Project-specific includes (adjust paths as necessary if your structure is different)
-#include "NetworkEndpoint.h" 
-#include "PacketProcessor.h" 
-#include "NetworkCommon.h" // For S2C_Response (should include <optional>)
-#include "GamePacketHeader.h" // For GamePacketHeader
-#include "../Gameplay/PlayerManager.h" // For PlayerManager (if needed in this file)
-#include "UDPReliabilityProtocol.h"
+// Project-specific includes
+#include "INetworkIO.h"         // <<< ADD: Definition of the interface we are implementing
+#include "NetworkEndpoint.h"    // <<< KEEP
+#include "NetworkCommon.h"      // <<< KEEP (If OverlappedIOContext or other low-level structs need it, otherwise can be removed if only S2C_Response was used from here)
+
+#include "OverlappedIOContext.h"
 
 // Constants
-const int DEFAULT_UDP_BUFFER_SIZE_IOCP = 4096;
-const int MAX_PENDING_RECEIVES_IOCP = 200;
-const int RELIABILITY_THREAD_SLEEP_MS = 20; // Check for retransmissions/pending ACKs every 20ms
-const float DEFAULT_RTO_MS = 200.0f;        // Default Retransmission Timeout
-const int DEFAULT_MAX_RETRIES = 5;          // Default max retries for a reliable packet
-const int STALE_CONNECTION_TIMEOUT_SECONDS = 60; // Timeout for considering a connection stale (no packets received in this time)
+const int DEFAULT_UDP_BUFFER_SIZE_IOCP = 4096;  // <<< KEEP (or make it a non-const member if configurable per instance)
+const int MAX_PENDING_RECEIVES_IOCP = 200;    // <<< KEEP (or make it a non-const member)
 
 namespace RiftForged {
-    namespace Networking {
-
-        enum class IOOperationType {
-            None,
-            Recv,
-            Send
-        };
-
-        struct OverlappedIOContext {
-            OVERLAPPED      overlapped;
-            IOOperationType operationType;
-            WSABUF          wsaBuf;
-            std::vector<char> buffer;
-            sockaddr_in     remoteAddrNative;
-            int             remoteAddrNativeLen;
-
-            OverlappedIOContext(IOOperationType opType, size_t bufferSize = DEFAULT_UDP_BUFFER_SIZE_IOCP)
-                : operationType(opType), buffer(bufferSize), remoteAddrNativeLen(sizeof(sockaddr_in)) {
-                ZeroMemory(&overlapped, sizeof(OVERLAPPED));
-                ZeroMemory(&remoteAddrNative, sizeof(sockaddr_in));
-                wsaBuf.buf = buffer.data();
-                wsaBuf.len = static_cast<ULONG>(buffer.size());
-            }
-
-            void ResetForReceive() {
-                // CRITICAL: Zero out the OVERLAPPED structure before re-posting a receive
-                ZeroMemory(&overlapped, sizeof(OVERLAPPED));
-                ZeroMemory(&remoteAddrNative, sizeof(sockaddr_in));
-                operationType = IOOperationType::Recv; // Ensure type is set correctly
-                remoteAddrNativeLen = sizeof(sockaddr_in); // Reset for WSARecvFrom
-
-                // Ensure wsaBuf points to the buffer (especially if buffer could have reallocated, though unlikely for fixed pool)
-                // and len is set to the full capacity for receiving.
-                wsaBuf.buf = buffer.data();
-                wsaBuf.len = static_cast<ULONG>(buffer.size());
-            }
-        };
-
-        class UDPSocketAsync {
+    namespace Networking {        
+      
+        class UDPSocketAsync : public INetworkIO { // <<< MODIFY: Implement INetworkIO
         public:
-            // Constructor now takes PlayerManager
-            UDPSocketAsync(RiftForged::GameLogic::PlayerManager& playerManager,
-                PacketProcessor& packetProcessor,
-                std::string listenIp, uint16_t listenPort);
-            ~UDPSocketAsync();
+            // <<< MODIFY: Constructor signature - no longer takes PlayerManager or PacketProcessor directly.
+            // It will be initialized via the Init method from the INetworkIO interface.
+            UDPSocketAsync(); // Default constructor, or one that just takes listenIp/Port if Init takes the handler
+            ~UDPSocketAsync() override; // <<< MODIFY: Add override
 
-            UDPSocketAsync(const UDPSocketAsync&) = delete;
-            UDPSocketAsync& operator=(const UDPSocketAsync&) = delete;
+            UDPSocketAsync(const UDPSocketAsync&) = delete;             // <<< KEEP
+            UDPSocketAsync& operator=(const UDPSocketAsync&) = delete;  // <<< KEEP
 
-            bool Init();
-            bool Start();
-            void Stop();
-           
-            bool SendRawTo(const NetworkEndpoint& recipient, const char* data, int length);
-
-            // New method for sending data reliably
-            bool SendReliableTo(const NetworkEndpoint& recipient,
-                MessageType messageType,
-                const uint8_t* payloadData,
-                uint16_t payloadSize,
-                uint8_t additionalFlags = 0); // e.g., IS_HEARTBEAT
-
-            // Optional: A method for sending unreliable data directly if needed by application
-            bool SendUnreliableTo(const NetworkEndpoint& recipient,
-                MessageType messageType,
-                const uint8_t* payloadData,
-                uint16_t payloadSize,
-                uint8_t additionalFlags = 0);
-
-
-            bool IsRunning() const;
+            // --- INetworkIO Interface Implementation ---
+            bool Init(const std::string& listenIp, uint16_t listenPort, INetworkIOEvents* eventHandler) override; // <<< MODIFY/ADD
+            bool Start() override;                                      // <<< MODIFY: Add override
+            void Stop() override;                                       // <<< MODIFY: Add override
+            bool SendData(const NetworkEndpoint& recipient, const uint8_t* data, uint32_t size) override; // <<< MODIFY/REPLACE SendRawTo
+            bool IsRunning() const override;                            // <<< MODIFY: Add override
 
         private:
+
             void WorkerThread();
-            bool PostReceive(OverlappedIOContext* pRecvContext);
-            OverlappedIOContext* GetFreeReceiveContext();
-            void ReturnReceiveContext(OverlappedIOContext* pContext);
+            // <<< MODIFY: Rename to avoid potential clash if INetworkIO exposes similar methods, and to denote internal use.
+            bool PostReceiveInternal(OverlappedIOContext* pRecvContext);
+            OverlappedIOContext* GetFreeReceiveContextInternal();
+            void ReturnReceiveContextInternal(OverlappedIOContext* pContext);
 
-            void ReliabilityManagementThread();
-            std::shared_ptr<ReliableConnectionState> GetOrCreateReliabilityState(const NetworkEndpoint& endpoint);
+            // --- Member Variables ---
+            std::string m_listenIp;                 // <<< KEEP (Set by Init)
+            uint16_t m_listenPort;                  // <<< KEEP (Set by Init)
+            INetworkIOEvents* m_eventHandler;       // <<< ADD: Pointer to the event sink (PacketHandler)
 
+            SOCKET m_socket;                        // <<< KEEP
+            HANDLE m_iocpHandle;                    // <<< KEEP
 
-            RiftForged::GameLogic::PlayerManager& m_playerManager; // Added PlayerManager reference
-            PacketProcessor& m_packetProcessor;
-            std::string m_listenIp;
-            uint16_t m_listenPort;
+            std::vector<std::thread> m_workerThreads; // <<< KEEP
+            std::atomic<bool> m_isRunning;            // <<< KEEP
 
-            SOCKET m_socket;
-            HANDLE m_iocpHandle;
-
-            std::vector<std::thread> m_workerThreads;
-            std::atomic<bool> m_isRunning;
-
-            std::vector<std::unique_ptr<OverlappedIOContext>> m_receiveContextPool;
-            std::deque<OverlappedIOContext*> m_freeReceiveContexts;
-            std::mutex m_receiveContextMutex;
-
-            std::map<NetworkEndpoint, std::shared_ptr<ReliableConnectionState>> m_reliabilityStates;
-            std::mutex m_reliabilityStatesMutex; // To protect access to m_reliabilityStates
-            std::thread m_reliabilityThread;    // Thread for managing retransmissions and pending ACKs
-
-            std::map<NetworkEndpoint, std::chrono::steady_clock::time_point> m_endpointLastSeenTime;
+            // Receive context pooling
+            std::vector<std::unique_ptr<OverlappedIOContext>> m_receiveContextPool; // <<< KEEP
+            std::deque<OverlappedIOContext*> m_freeReceiveContexts;                 // <<< KEEP
+            std::mutex m_receiveContextMutex;                                       // <<< KEEP
 
         };
 

@@ -1,13 +1,14 @@
 ﻿#include "PingMessageHandler.h"
 // Generated FlatBuffer headers (adjust path to your SharedProtocols/Generated/ folder)
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h"
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h" // For S2C_RiftStepExecutedMsg
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h" // For Vec3, Quaternion, etc.
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h"
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // For S2C_RiftStepExecutedMsg
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h" // For Vec3, Quaternion, etc.
 #include "GamePacketHeader.h"     // For GamePacketHeader, MessageType, GetGamePacketHeaderSize()
 #include <iostream>
 #include <chrono>
 #include <vector>   // For constructing send_buffer if done at a higher level
 #include <cstring>  // For memcpy if constructing send_buffer at a higher level
+#include "../Gameplay/PlayerManager.h" // For ActivePlayer struct
 
 namespace RiftForged {
     namespace Networking {
@@ -20,6 +21,7 @@ namespace RiftForged {
 
                 std::optional<S2C_Response> PingMessageHandler::Process(
                     const NetworkEndpoint& sender_endpoint,
+					RiftForged::GameLogic::ActivePlayer* player, // Ensure this is passed for context
                     const C2S_PingMsg* message) {
 
                     if (!message) {

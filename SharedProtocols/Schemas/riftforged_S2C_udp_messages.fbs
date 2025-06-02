@@ -2,9 +2,9 @@
 // Protocol Version: 0.0.3
 // Description: Defines Server-to-Client messages for real-time UDP communication.
 // This file is part of Riftforged.
-// Copyright (C) 2023 Riftforged 
+// Copyright (C) 2023-2025 Riftforged Game Development Team
 
-include "riftforged_common_types.fbs"; 
+include "riftforged_common_types.fbs";
 
 namespace RiftForged.Networking.UDP.S2C;
 
@@ -15,13 +15,13 @@ enum ResourceType : byte { Will = 0, Health = 1, Shimmer_Notification = 2 }
 
 enum CombatEventType : byte {
   None = 0,
-  DamageDealt = 1, 
-  HealReceived = 2, 
+  DamageDealt = 1,
+  HealReceived = 2,
   Miss = 3,
   Dodge = 4,
-  Block = 5, 
-  Parry = 6, 
-  CriticalHit = 7, 
+  Block = 5,
+  Parry = 6,
+  CriticalHit = 7,
   AbilityInterrupt = 8
 }
 
@@ -32,18 +32,15 @@ table Effect_AreaDamageData {
   area_center:RiftForged.Networking.Shared.Vec3;
   radius:float;
   damage_info:RiftForged.Networking.Shared.DamageInstance;
-  // visual_effect_tag:string; // Optional, can be part of parent message
 }
 
 table Effect_AreaStunData {
   area_center:RiftForged.Networking.Shared.Vec3;
   radius:float;
   stun_details:RiftForged.Networking.Shared.StunInstance;
-  // visual_effect_tag:string;
 }
 
 table Effect_ApplyBuffDebuffData {
-  // target_entity_id:ulong; // Target is often implied by parent message context
   buff_debuff_id:RiftForged.Networking.Shared.StatusEffectCategory;
   duration_ms:uint;
 }
@@ -53,45 +50,37 @@ table Effect_PersistentAreaData {
   radius:float;
   duration_ms:uint;
   visual_effect_tag:string;
-  // What effects this area applies on contact or per tick:
   applied_effects_on_contact:[RiftForged.Networking.Shared.StatusEffectCategory];
-  // damage_per_tick:RiftForged.Networking.Shared.DamageInstance; // Example
 }
 
 //-----------------------------------------------------------------------------
 // S2C Combat Event Detail Table Definitions (for CombatEventPayload)
 //-----------------------------------------------------------------------------
-// Existing table, add/confirm is_basic_attack
 table CombatEvent_DamageDealtDetails {
-  source_entity_id:ulong;     // Who dealt the damage
-  target_entity_id:ulong;     // Who received the damage
-  damage_info:RiftForged.Networking.Shared.DamageInstance (required); // Includes amount, type, and is_crit
+  source_entity_id:ulong;
+  target_entity_id:ulong;
+  damage_info:RiftForged.Networking.Shared.DamageInstance (required);
   is_kill:bool = false;
-  is_basic_attack:bool = false; // << ADD/CONFIRM THIS
-  // weapon_type_id_used:uint; // Optional: if client needs to know which weapon for VFX/SFX
+  is_basic_attack:bool = false;
 }
 
-// NEW: For spawning visible projectiles (basic attacks or abilities)
+// For spawning visible projectiles (basic attacks or abilities)
 table S2C_SpawnProjectileMsg {
-  projectile_id:ulong (key);    // Unique ID for this projectile instance, assigned by server
-  owner_entity_id:ulong;        // Player or NPC ID that fired it
-  // weapon_type_id_source:uint;   // Optional: Base ID of weapon/ability that generated it (for client VFX/SFX lookup)
-                                // Alternatively, vfx_tag can cover this.
+  projectile_id:ulong (key);
+  owner_entity_id:ulong;
   start_position:Shared.Vec3 (required);
-  initial_direction:Shared.Vec3 (required); // Normalized world-space vector
-  speed:float;                    // Units per second
-  max_range:float;                // How far it will travel before expiring if it hits nothing
-  projectile_vfx_tag:string;      // Tag for client to look up visuals (e.g., "ArrowBasic", "FireboltBasic")
-  // hit_effect_vfx_tag:string;   // VFX for when this specific projectile hits
-  // size_radius:float;           // For collision detection if it's not a point
-  // can_pierce:bool = false;
+  initial_direction:Shared.Vec3 (required);
+  speed:float;
+  max_range:float;
+  projectile_vfx_tag:string;
 }
 
 //-----------------------------------------------------------------------------
 // S2C Unions using the above tables
 //-----------------------------------------------------------------------------
-union RiftStepEffectPayload : byte { // : byte should map to uint8_t for types by default by most flatc versions
-  //NONE_RiftStepEffect = 0,          // Explicit NONE is good practice for unions
+// Note: FlatBuffers implicitly handles a 'NONE' type for unions (value 0)
+// if no explicit table is assigned to that value.
+union RiftStepEffectPayload : byte {
   AreaDamage:Effect_AreaDamageData,
   AreaStun:Effect_AreaStunData,
   ApplyBuff:Effect_ApplyBuffDebuffData,
@@ -99,7 +88,6 @@ union RiftStepEffectPayload : byte { // : byte should map to uint8_t for types b
 }
 
 union CombatEventPayload : byte {
-  //NONE_CombatEvent = 0,
   DamageDealt:CombatEvent_DamageDealtDetails
   // Add S2C tables for HealReceivedDetails, StatusEffectAppliedDetails etc. here later
 }
@@ -109,33 +97,28 @@ union CombatEventPayload : byte {
 //-----------------------------------------------------------------------------
 table S2C_EntityStateUpdateMsg {
   entity_id:ulong (key);
-  position:RiftForged.Networking.Shared.Vec3;    // Assume always present for an update
-  orientation:RiftForged.Networking.Shared.Quaternion; // Assume always present
+  position:RiftForged.Networking.Shared.Vec3;
+  orientation:RiftForged.Networking.Shared.Quaternion;
   current_health:int;
   max_health:uint;
   current_will:int;
   max_will:uint;
   server_timestamp_ms:ulong;
-  animation_state_id:uint; // Defaults to 0 (e.g., Idle) if not set
-  active_status_effects:[RiftForged.Networking.Shared.StatusEffectCategory]; // Optional (empty vector if none)
-  // movement_state:RiftForged.GameLogic.PlayerMovementState; // If PlayerMovementState is in common_types.fbs
+  animation_state_id:uint;
+  active_status_effects:[RiftForged.Networking.Shared.StatusEffectCategory];
 }
 
-// For RiftStep, signaling initiation, target, duration, and immediate effects.
-// Server position is updated instantly. Client visualizes travel.
 table S2C_RiftStepInitiatedMsg {
   instigator_entity_id:ulong;
   actual_start_position:RiftForged.Networking.Shared.Vec3;
-  calculated_target_position:RiftForged.Networking.Shared.Vec3; // Client might not need this if actual_final is sent
-  actual_final_position:RiftForged.Networking.Shared.Vec3;   // Where player landed (server authoritative)
-  cosmetic_travel_duration_sec:float = 0.25; // For client visuals, server logic is instant
-  
-  entry_effects:[RiftStepEffectPayload]; // Vector of actual effect tables, implicit _type vector
-  exit_effects:[RiftStepEffectPayload];  // Vector of actual effect tables, implicit _type vector
-  
+  calculated_target_position:RiftForged.Networking.Shared.Vec3;
+  actual_final_position:RiftForged.Networking.Shared.Vec3;
+  cosmetic_travel_duration_sec:float = 0.25;
+  entry_effects:[RiftStepEffectPayload]; // FlatBuffers handles vector of unions by creating type/offset vectors
+  exit_effects:[RiftStepEffectPayload];
   start_vfx_id:string;
-  travel_vfx_id:string; // For the short cosmetic travel
-  end_vfx_id:string;    // For impact at final_position
+  travel_vfx_id:string;
+  end_vfx_id:string;
 }
 
 table S2C_ResourceUpdateMsg {
@@ -146,7 +129,7 @@ table S2C_ResourceUpdateMsg {
 
 table S2C_CombatEventMsg {
   event_type:CombatEventType;
-  event_payload:CombatEventPayload (required); // This union must contain something
+  event_payload:CombatEventPayload (required);
   server_timestamp_ms:ulong;
 }
 
@@ -157,23 +140,44 @@ table S2C_PongMsg {
 
 table S2C_SystemBroadcastMsg {
   message_text:string (required);
-  sender_name:string; 
+  sender_name:string;
 }
+
+// <<< NEWLY ADDED S2C MESSAGES FOR JOIN PROCESS >>>
+table S2C_JoinSuccessMsg {
+  assigned_player_id:ulong; // The ID the client should use for itself
+  welcome_message:string;              // Optional: e.g., "Welcome to RiftForged Shard Alpha!"
+  server_tick_rate_hz:ushort;          // Optional: Inform client about current server tick rate (in Hz)
+  // You could add other initial critical state here if needed, e.g., initial resources,
+  // or simply rely on the first S2C_EntityStateUpdate to convey full player state.
+}
+
+table S2C_JoinFailedMsg {
+  reason_message:string;               // E.g., "Server full.", "Invalid character data.", "Authentication failed."
+  reason_code:short;                   // Optional: An enum or error code for specific failure reasons
+}
+// <<< END NEWLY ADDED S2C MESSAGES >>>
+
 
 //-----------------------------------------------------------------------------
 // S2C Root Payload Union and Root Message
 //-----------------------------------------------------------------------------
-union S2C_UDP_Payload {
+union S2C_UDP_Payload { // FlatBuffers will assign type 0 to NONE implicitly if not first
+  // Consider adding an explicit 'NONE_Payload' table if you want to send a typed "no payload".
+  // For now, an unset union (type 0) serves as a functional none.
   EntityStateUpdate:S2C_EntityStateUpdateMsg,
-  RiftStepInitiated:S2C_RiftStepInitiatedMsg, 
+  RiftStepInitiated:S2C_RiftStepInitiatedMsg,
   ResourceUpdate:S2C_ResourceUpdateMsg,
   CombatEvent:S2C_CombatEventMsg,
   SpawnProjectile:S2C_SpawnProjectileMsg,
   SystemBroadcast:S2C_SystemBroadcastMsg,
-  Pong:S2C_PongMsg
+  Pong:S2C_PongMsg,
+  S2C_JoinSuccessMsg,   // <<< ADDED TO UNION
+  S2C_JoinFailedMsg     // <<< ADDED TO UNION
 }
 
 table Root_S2C_UDP_Message {
   payload:S2C_UDP_Payload (required);
 }
+
 root_type Root_S2C_UDP_Message;

@@ -294,7 +294,7 @@ namespace RiftForged {
                 return outcome;
             }
 
-            if (!player->CanPerformRiftStep()) { // Method from
+        if (!player->CanPerformRiftStep()) { // Method from
                 outcome.success = false;
                 outcome.failure_reason_code = player->IsAbilityOnCooldown(RiftForged::GameLogic::RIFTSTEP_ABILITY_ID) ? "ON_COOLDOWN" : "INVALID_PLAYER_STATE"; //
                 RF_GAMEPLAY_INFO("Player {} RiftStep failed pre-check: {}", player->playerId, outcome.failure_reason_code); //
@@ -305,8 +305,8 @@ namespace RiftForged {
             // This should populate: outcome.actual_start_position, outcome.intended_target_position,
             // outcome.calculated_target_position (e.g., set to intended_target_position initially),
             // outcome.type_executed, outcome.entry_effects_data, outcome.exit_effects_data, VFX IDs etc.
-            outcome = player->PrepareRiftStepOutcome(intent); // Method from
-
+            // Replace the problematic line with the following:  
+            outcome = player->PrepareRiftStepOutcome(intent, player->current_rift_step_definition.type);
             if (!outcome.success) {
                 RF_GAMEPLAY_INFO("Player {} RiftStep preparation failed internally by ActivePlayer: {}", player->playerId, outcome.failure_reason_code); //
                 return outcome;

@@ -1,94 +1,122 @@
-﻿// File: PacketProcessor.cpp
-// RiftForged Gaming
+﻿// File: NetworkEngine/PacketProcessor.cpp (Fully Refactored with Join Fixes)
+// RiftForged Game Development Team
 // Copyright (c) 2023-2025 RiftForged Game Development Team
 
+#include "PacketProcessor.h"
+#include "MessageDispatcher.h"
+#include "../GameServer/GameServerEngine.h"
+#include "../Gameplay/PlayerManager.h" 
+#include "../Gameplay/ActivePlayer.h"  
+#include "../Utils/Logger.h"   
+#include "../NetworkEngine/GamePacketHeader.h"
 
-#include "PacketProcessor.h"        // Includes NetworkCommon.h, GamePacketHeader.h, forward declares MessageDispatcher & GameplayEngine
-#include "MessageDispatcher.h"      // For m_messageDispatcher.DispatchC2SMessage
-#include "../Gameplay/GameplayEngine.h" // For m_gameplayEngine.InitializePlayerInWorld and accessing PlayerManager
-#include "../Gameplay/PlayerManager.h"  // For m_gameplayEngine.GetPlayerManager().GetOrCreatePlayer()
-#include "../Gameplay/ActivePlayer.h"    // For ActivePlayer* type
-#include "../Utils/Logger.h"        // For RF_NETWORK_ERROR, RF_NETWORK_INFO, etc. (Ensure path is correct)
-
-#include <cstring> // For std::memcpy
-// Note: <iostream> was previously used for std::cerr/cout, assuming Logger.h now provides RF_... macros for all logging.
+// Include C2S messages header for parsing the C2S_JoinRequestMsg
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h" 
 
 namespace RiftForged {
     namespace Networking {
 
-        // Constructor now takes GameplayEngine
-        PacketProcessor::PacketProcessor(MessageDispatcher& dispatcher, RiftForged::Gameplay::GameplayEngine& gameplayEngine)
+        PacketProcessor::PacketProcessor(MessageDispatcher& dispatcher, RiftForged::Server::GameServerEngine& gameServerEngine)
             : m_messageDispatcher(dispatcher),
-            m_gameplayEngine(gameplayEngine) { // Initialize m_gameplayEngine
-            RF_NETWORK_INFO("PacketProcessor: Initialized with MessageDispatcher and GameplayEngine.");
+            m_gameServerEngine(gameServerEngine) {
+            RF_NETWORK_INFO("PacketProcessor (MessageHandler): Initialized.");
         }
 
-        std::optional<S2C_Response> PacketProcessor::ProcessIncomingRawPacket(
-            const char* raw_buffer,
-            int raw_length,
-            const NetworkEndpoint& sender_endpoint) {
+        std::optional<S2C_Response> PacketProcessor::ProcessApplicationMessage(
+            const NetworkEndpoint& sender_endpoint,
+            MessageType messageId,
+            const uint8_t* flatbuffer_payload_ptr,
+            uint16_t flatbuffer_payload_size) {
 
-            // 1. Validate basic packet size
-            if (raw_length < static_cast<int>(GetGamePacketHeaderSize())) { //
-                RF_NETWORK_ERROR("PacketProcessor: Packet from {} too small ({} bytes) for GamePacketHeader.", sender_endpoint.ToString(), raw_length);
+            RF_NETWORK_TRACE("PacketProcessor: Processing MessageType: {} from {}, Payload Size: {}",
+                EnumNameMessageType(messageId), sender_endpoint.ToString(), flatbuffer_payload_size);
+
+            GameLogic::ActivePlayer* playerContext = nullptr;
+            uint64_t playerId = m_gameServerEngine.GetPlayerIdForEndpoint(sender_endpoint);
+
+            if (playerId != 0) {
+                playerContext = m_gameServerEngine.GetPlayerManager().FindPlayerById(playerId);
+                if (!playerContext) {
+                    RF_NETWORK_ERROR("PacketProcessor: PlayerId {} was mapped for endpoint {} but ActivePlayer not found in PlayerManager! Desynchronized session. Cleaning up stale GameServerEngine mapping.",
+                        playerId, sender_endpoint.ToString());
+                    m_gameServerEngine.OnClientDisconnected(sender_endpoint);
+                    return std::nullopt;
+                }
+                RF_NETWORK_TRACE("PacketProcessor: Existing PlayerId {} found for endpoint {}.", playerId, sender_endpoint.ToString());
+            }
+            else {
+                if (messageId == RiftForged::Networking::MessageType::C2S_JoinRequest) {
+                    RF_NETWORK_INFO("PacketProcessor: Received C2S_JoinRequest from new endpoint {}. Attempting to process join...",
+                        sender_endpoint.ToString());
+
+                    std::string characterToLoad = "";
+                    if (flatbuffer_payload_ptr && flatbuffer_payload_size > 0) {
+                        // Verify and parse the FlatBuffer
+                        flatbuffers::Verifier verifier(flatbuffer_payload_ptr, flatbuffer_payload_size);
+                        if (RiftForged::Networking::UDP::C2S::VerifyRoot_C2S_UDP_MessageBuffer(verifier)) {
+                            auto rootMsg = RiftForged::Networking::UDP::C2S::GetRoot_C2S_UDP_Message(flatbuffer_payload_ptr);
+                            if (rootMsg && rootMsg->payload_type() == RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_JoinRequest) {
+                                auto joinPayload = rootMsg->payload_as_JoinRequest();
+                                if (joinPayload && joinPayload->character_id_to_load()) {
+                                    characterToLoad = joinPayload->character_id_to_load()->str();
+                                    RF_NETWORK_INFO("PacketProcessor: Extracted Character ID '{}' from JoinRequest for endpoint {}.", characterToLoad, sender_endpoint.ToString());
+                                }
+                                else {
+                                    RF_NETWORK_WARN("PacketProcessor: JoinRequest payload did not contain a character_id_to_load for endpoint {}.", sender_endpoint.ToString());
+                                }
+                            }
+                            else {
+                                RF_NETWORK_WARN("PacketProcessor: JoinRequest for endpoint {} had incorrect FlatBuffer payload type: Expected JoinRequest, Got {}.",
+                                    sender_endpoint.ToString(),
+                                    rootMsg ? RiftForged::Networking::UDP::C2S::EnumNameC2S_UDP_Payload(rootMsg->payload_type()) : "Unknown/Null Root");
+                                // Still attempt join with empty charID, GameServerEngine might have defaults or reject.
+                            }
+                        }
+                        else {
+                            RF_NETWORK_WARN("PacketProcessor: JoinRequest FlatBuffer verification failed for endpoint {}.", sender_endpoint.ToString());
+                            // GameServerEngine will likely send JoinFailed if it can't proceed.
+                        }
+                    }
+                    else {
+                        RF_NETWORK_WARN("PacketProcessor: JoinRequest for endpoint {} received with no payload.", sender_endpoint.ToString());
+                    }
+
+                    // GameServerEngine handles sending S2C_JoinSuccess or S2C_JoinFailed
+                    uint64_t newPlayerId = m_gameServerEngine.OnClientAuthenticatedAndJoining(sender_endpoint, characterToLoad);
+
+                    if (newPlayerId != 0) {
+                        RF_NETWORK_INFO("PacketProcessor: New player session {} successfully initiated by GameServerEngine for endpoint {}.",
+                            newPlayerId, sender_endpoint.ToString());
+                        // Join request is fully handled by GameServerEngine, no further dispatch needed for this message.
+                        return std::nullopt;
+                    }
+                    else {
+                        RF_NETWORK_ERROR("PacketProcessor: GameServerEngine failed to process join request for endpoint {}. GameServerEngine should have sent S2C_JoinFailed.",
+                            sender_endpoint.ToString());
+                        return std::nullopt; // Join failed.
+                    }
+                }
+                else {
+                    RF_NETWORK_WARN("PacketProcessor: Dropping MessageType {} from unassociated endpoint {} (not a C2S_JoinRequest).",
+                        EnumNameMessageType(messageId), sender_endpoint.ToString());
+                    return std::nullopt;
+                }
+            }
+
+            if (!playerContext) {
+                RF_NETWORK_WARN("PacketProcessor: No valid player context obtained for endpoint {}. MessageType {} (numeric: {}) not dispatched.",
+                    sender_endpoint.ToString(), EnumNameMessageType(messageId), static_cast<int>(messageId));
                 return std::nullopt;
             }
 
-            // 2. Deserialize our custom GamePacketHeader
-            GamePacketHeader header; //
-            std::memcpy(&header, raw_buffer, GetGamePacketHeaderSize());
-
-            // 3. Validate Protocol ID
-            if (header.protocolId != CURRENT_PROTOCOL_ID_VERSION) { //
-                RF_NETWORK_WARN("PacketProcessor: Mismatched protocol ID from {}. Expected: {}, Got: {}",
-                    sender_endpoint.ToString(), CURRENT_PROTOCOL_ID_VERSION, header.protocolId);
-                return std::nullopt;
-            }
-
-            // --- NEW: Player Creation and World Initialization Logic ---
-            bool player_was_newly_created = false;
-            // Assuming GameplayEngine has a public member m_playerManager or a GetPlayerManager() method.
-            // Let's use a conceptual GetPlayerManager() for better encapsulation.
-            RiftForged::GameLogic::ActivePlayer* player =
-                m_gameplayEngine.GetPlayerManager().GetOrCreatePlayer(sender_endpoint, player_was_newly_created);
-            // GetOrCreatePlayer signature needs to be: ActivePlayer* GetOrCreatePlayer(const NetworkEndpoint&, bool&);
-
-            if (!player) {
-                RF_NETWORK_ERROR("PacketProcessor: Failed to get or create player for endpoint: {}. Dropping packet for MessageType: {}",
-                    sender_endpoint.ToString(), static_cast<int>(header.messageType));
-                return std::nullopt;
-            }
-
-            if (player && player_was_newly_created) {
-                RF_NETWORK_INFO("PacketProcessor: New player {} detected from endpoint {}. Initializing in world.", player->playerId, sender_endpoint.ToString());
-
-                // Define spawn parameters (these should eventually come from a spawn manager or world settings)
-                RiftForged::Networking::Shared::Vec3 spawn_position(0.0f, 0.0f, 1.0f); // Example spawn point
-                RiftForged::Networking::Shared::Quaternion spawn_orientation(0.0f, 0.0f, 0.0f, 1.0f); // Identity orientation
-
-                // Call GameplayEngine to create the PhysX controller and set initial logical/physical state
-                m_gameplayEngine.InitializePlayerInWorld(player, spawn_position, spawn_orientation); //
-                // InitializePlayerInWorld will internally call m_physicsEngine.CreateCharacterController and SetCharacterControllerOrientation
-            }
-            // --- END NEW Player Creation and World Initialization Logic ---
-
-            // 4. TODO: Process Reliability Information from the header (your existing TODO)
-            // ...
-
-            // 5. Determine the start and size of the FlatBuffer payload
-            const uint8_t* flatbuffer_payload_ptr = reinterpret_cast<const uint8_t*>(raw_buffer + GetGamePacketHeaderSize());
-            int flatbuffer_payload_size = raw_length - static_cast<int>(GetGamePacketHeaderSize());
-
-            if (flatbuffer_payload_size < 0) {
-                RF_NETWORK_ERROR("PacketProcessor: Negative FlatBuffer payload size calculated from {}. Header size: {}, Total length: {}. MessageType: {}",
-                    sender_endpoint.ToString(), GetGamePacketHeaderSize(), raw_length, static_cast<int>(header.messageType));
-                return std::nullopt;
-            }
-
-            // 6. Dispatch to the MessageDispatcher
-            // Pass the ActivePlayer* pointer to the dispatcher, which can then pass it to the handlers.
-            // This assumes DispatchC2SMessage is updated to accept ActivePlayer*.
-            return m_messageDispatcher.DispatchC2SMessage(header, flatbuffer_payload_ptr, flatbuffer_payload_size, sender_endpoint, player);
+            // For all other messages that require an existing player session:
+            return m_messageDispatcher.DispatchC2SMessage(
+                messageId,
+                flatbuffer_payload_ptr,
+                flatbuffer_payload_size,
+                sender_endpoint,
+                playerContext
+            );
         }
 
     } // namespace Networking

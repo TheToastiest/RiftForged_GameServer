@@ -41,6 +41,7 @@ namespace RiftForged {
                     AbilityMessageHandler(RiftForged::GameLogic::PlayerManager& m_playerManager, RiftForged::Gameplay::GameplayEngine& m_gameplayEngine);
                     std::optional<RiftForged::Networking::S2C_Response> Process( // Return type changed
                         const RiftForged::Networking::NetworkEndpoint& sender_endpoint,
+						RiftForged::GameLogic::ActivePlayer* player, // Added ActivePlayer pointer
                         const C2S_UseAbilityMsg* message
                     );
                 private:

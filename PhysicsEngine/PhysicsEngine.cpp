@@ -36,7 +36,7 @@
 #include "physx/cudamanager/PxCudaContextManager.h"
 
 
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h" 
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h" 
 #include "../PhysicsEngine/PhysicsTypes.h" // ADDED - Ensure this path is correct
 // Logger is included via PhysicsEngine.h
 //#pragma comment(lib, "PhysXCooking_64.lib")
@@ -113,7 +113,7 @@ namespace RiftForged {
 
         PhysicsEngine::PhysicsEngine()
             : m_foundation(nullptr),
-            m_physics(nullptr),
+            m_physics(nullptr), 
             m_dispatcher(nullptr),
             m_scene(nullptr),
             m_default_material(nullptr),
@@ -131,69 +131,196 @@ namespace RiftForged {
             Shutdown();
         }
 
+        // Place this within your PhysicsEngine.cpp, replacing your existing Initialize method
+
         bool PhysicsEngine::Initialize(const SharedVec3& gravityVec, bool connect_to_pvd) {
-            RF_PHYSICS_INFO("PhysicsEngine: Initializing...");
+            RF_PHYSICS_INFO("PhysicsEngine: Initializing PhysX SDK version {}.{}.{}",
+                PX_PHYSICS_VERSION_MAJOR, PX_PHYSICS_VERSION_MINOR, PX_PHYSICS_VERSION_BUGFIX);
 
+            // Ensure thread safety during initialization
+            std::lock_guard<std::mutex> init_lock(m_physicsMutex);
+
+            if (m_foundation) {
+                RF_PHYSICS_WARN("PhysicsEngine: Already initialized. Please call Shutdown() first if re-initialization is intended.");
+                return true; // Or false, depending on desired behavior for re-initialization attempts
+            }
+
+            // 1. Create Foundation
             m_foundation = PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
-            if (!m_foundation) { /* ... */ return false; }
-            RF_PHYSICS_INFO("PhysicsEngine: PxFoundation created.");
+            if (!m_foundation) {
+                RF_PHYSICS_CRITICAL("PhysicsEngine: PxCreateFoundation failed!");
+                return false;
+            }
+            RF_PHYSICS_INFO("PhysicsEngine: PxFoundation created successfully.");
 
-            if (connect_to_pvd) { /* ... PVD setup ... */ }
-            else { RF_PHYSICS_INFO("PhysicsEngine: PVD connection explicitly disabled."); }
+            // 2. Setup PVD (PhysX Visual Debugger) Connection
+            if (connect_to_pvd) {
+                RF_PHYSICS_INFO("PhysicsEngine: Attempting to connect to PhysX Visual Debugger (PVD)...");
+                if (!m_pvd_transport) { // Only create a new transport if one wasn't set externally
+                    m_pvd_transport = physx::PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 10);
+                    if (!m_pvd_transport) {
+                        RF_PHYSICS_WARN("PhysicsEngine: PxDefaultPvdSocketTransportCreate failed. PVD connection skipped.");
+                    }
+                }
 
-            physx::PxTolerancesScale tolerances_scale;
-            m_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation, tolerances_scale, true, m_pvd);
-            if (!m_physics) { /* ... */ return false; }
-            RF_PHYSICS_INFO("PhysicsEngine: PxPhysics created.");
+                if (m_pvd_transport) {
+                    if (!m_pvd) m_pvd = physx::PxCreatePvd(*m_foundation); // Create PVD if it doesn't exist
+                    if (m_pvd) {
+                        if (m_pvd->connect(*m_pvd_transport, physx::PxPvdInstrumentationFlag::eALL)) {
+                            RF_PHYSICS_INFO("PhysicsEngine: PVD connection successful.");
+                        }
+                        else {
+                            RF_PHYSICS_WARN("PhysicsEngine: PVD connect failed. PVD will not be available.");
+                            // Don't release transport if it might have been set externally and only connect failed
+                            // If we created the PVD object and connect failed, we might release PVD object here
+                            // For simplicity, we keep m_pvd and m_pvd_transport; they just won't be connected.
+                        }
+                    }
+                    else {
+                        RF_PHYSICS_WARN("PhysicsEngine: PxCreatePvd failed. PVD unavailable.");
+                        if (m_pvd_transport && ! /* wasSetExternally - logic to know if we own it */ true) {
+                            m_pvd_transport->release(); m_pvd_transport = nullptr;
+                        }
+                    }
+                }
+            }
+            else {
+                RF_PHYSICS_INFO("PhysicsEngine: PVD connection explicitly disabled.");
+            }
 
-            if (!PxInitExtensions(*m_physics, m_pvd)) { /* ... */ return false; }
-            RF_PHYSICS_INFO("PhysicsEngine: PxExtensions initialized.");
+            // 3. Create Physics Main Object (PxPhysics)
+            physx::PxTolerancesScale tolerances_scale; // Use default scale
+            bool recordMemoryAllocations = true; // Useful for debugging, can be false for release
+            m_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation, tolerances_scale, recordMemoryAllocations, m_pvd);
+            if (!m_physics) {
+                RF_PHYSICS_CRITICAL("PhysicsEngine: PxCreatePhysics failed!");
+                // Partial shutdown:
+                if (m_pvd) { if (m_pvd->isConnected()) m_pvd->disconnect(); m_pvd->release(); m_pvd = nullptr; }
+                if (m_pvd_transport && ! /* wasSetExternally */ true) { m_pvd_transport->release(); m_pvd_transport = nullptr; }
+                if (m_foundation) { m_foundation->release(); m_foundation = nullptr; }
+                return false;
+            }
+            RF_PHYSICS_INFO("PhysicsEngine: PxPhysics created successfully.");
 
-            // physx::PxCookingParams cookingParams(m_physics->getTolerancesScale()); // REMOVED
-            // m_cooking = PxCreateCooking(PX_PHYSICS_VERSION, *m_foundation, cookingParams); // REMOVED
-            // if (!m_cooking) { /* ... */ return false; } // REMOVED
-            // RF_PHYSICS_INFO("PhysicsEngine: PxCooking created."); // REMOVED
+            // 4. Initialize Extensions (Required for many features like character controllers, cooking at runtime if needed)
+            if (!PxInitExtensions(*m_physics, m_pvd)) {
+                RF_PHYSICS_CRITICAL("PhysicsEngine: PxInitExtensions failed!");
+                // Partial shutdown:
+                if (m_physics) { m_physics->release(); m_physics = nullptr; }
+                if (m_pvd) { if (m_pvd->isConnected()) m_pvd->disconnect(); m_pvd->release(); m_pvd = nullptr; }
+                if (m_pvd_transport && ! /* wasSetExternally */ true) { m_pvd_transport->release(); m_pvd_transport = nullptr; }
+                if (m_foundation) { m_foundation->release(); m_foundation = nullptr; }
+                return false;
+            }
+            RF_PHYSICS_INFO("PhysicsEngine: PxExtensions initialized successfully.");
 
-
+            // 5. Setup CUDA Context Manager (for GPU Acceleration)
+            bool gpuContextIsValid = false;
             physx::PxCudaContextManagerDesc cudaContextManagerDesc;
-            m_cudaContextManager = PxCreateCudaContextManager(*m_foundation, cudaContextManagerDesc);
-            if (m_cudaContextManager) { /* ... CUDA checks ... */ }
-            else { RF_PHYSICS_WARN("PhysicsEngine: PxCreateCudaContextManager failed. GPU acceleration will be disabled."); }
+            // If you have a D3D device for interop, configure cudaContextManagerDesc.graphicsDevice
+            // Example: cudaContextManagerDesc.graphicsDevice = myD3DDevice;
+            // Example: cudaContextManagerDesc.interopMode = physx::PxCudaInteropMode::D3D11_INTEROP;
+            // m_cudaContextManager = PxCreateCudaContextManager(*m_foundation, cudaContextManagerDesc, PxGetProfilerCallback());
 
-            uint32_t num_hardware_threads = std::thread::hardware_concurrency();
-            uint32_t num_threads_for_dispatcher = (num_hardware_threads > 1) ? num_hardware_threads - 1 : 1;
-            if (num_hardware_threads == 0) {
+            if (m_cudaContextManager) {
+                RF_PHYSICS_INFO("PhysicsEngine: PxCudaContextManager created.");
+                if (m_cudaContextManager->contextIsValid()) {
+                    RF_PHYSICS_INFO("PhysicsEngine: CUDA context is VALID. GPU acceleration will be attempted.");
+                    gpuContextIsValid = true;
+                }
+                else {
+                    RF_PHYSICS_WARN("PhysicsEngine: CUDA context created but is NOT valid. Releasing CudaManager. GPU acceleration disabled.");
+                    m_cudaContextManager->release(); // Release if not valid
+                    m_cudaContextManager = nullptr;
+                }
+            }
+            else {
+                RF_PHYSICS_WARN("PhysicsEngine: PxCreateCudaContextManager failed. GPU acceleration disabled.");
+            }
+
+            // 6. Create CPU Dispatcher
+            uint32_t num_hardware_threads = 4; //std::thread::hardware_concurrency();
+            uint32_t num_threads_for_dispatcher = (num_hardware_threads > 1) ? num_hardware_threads - 1 : 4; // Leave 4 cores for main thread/testing
+            if (num_hardware_threads == 0) { // Should not happen, but as a fallback
                 RF_PHYSICS_WARN("PhysicsEngine: Could not determine hardware concurrency or 0 reported, defaulting CPU dispatcher to 1 thread.");
                 num_threads_for_dispatcher = 1;
             }
             m_dispatcher = physx::PxDefaultCpuDispatcherCreate(num_threads_for_dispatcher);
-            if (!m_dispatcher) { /* ... */ return false; }
+            if (!m_dispatcher) {
+                RF_PHYSICS_CRITICAL("PhysicsEngine: PxDefaultCpuDispatcherCreate failed!");
+                // Partial shutdown... (similar to above failures)
+                Shutdown(); // Call full shutdown for simplicity if this critical component fails
+                return false;
+            }
             RF_PHYSICS_INFO("PhysicsEngine: PxDefaultCpuDispatcher created with {} threads (Hardware reported: {}).",
                 num_threads_for_dispatcher, num_hardware_threads);
 
+            // 7. Create Scene (PxScene)
             physx::PxSceneDesc scene_desc(m_physics->getTolerancesScale());
-            scene_desc.gravity = ToPxVec3(gravityVec);
+            scene_desc.gravity = ToPxVec3(gravityVec); // Use conversion from PhysicsTypes.h
             scene_desc.cpuDispatcher = m_dispatcher;
-            scene_desc.filterShader = CustomFilterShader; // Use our custom shader
-            // scene_desc.simulationEventCallback = &m_yourSimulationEventCallbackInstance; 
-            // scene_desc.contactModifyCallback = &m_yourContactModifyCallbackInstance; 
+            scene_desc.filterShader = CustomFilterShader; // Your custom collision filter shader
+            // scene_desc.simulationEventCallback = this; // Assign 'this' if PhysicsEngine implements PxSimulationEventCallback
+            // scene_desc.contactModifyCallback = ...;   // If using contact modification
+            // scene_desc.ccdContactModifyCallback = ...; // If using CCD contact modification
 
-            if (m_cudaContextManager && m_cudaContextManager->contextIsValid()) { /* ... GPU scene setup ... */ }
-            else { /* ... CPU scene setup ... */ }
+            scene_desc.flags |= physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS; // To get list of active actors
+            scene_desc.flags |= physx::PxSceneFlag::eENABLE_PCM;           // Enable Persistent Contact Manifold (better stability)
+            scene_desc.flags |= physx::PxSceneFlag::eENABLE_STABILIZATION; // Helps with stacking and resting object stability
+
+            // Configure scene for GPU or CPU based on CudaContextManager status
+            if (gpuContextIsValid && m_cudaContextManager) { // Double check m_cudaContextManager is still valid
+                scene_desc.cudaContextManager = m_cudaContextManager;
+                scene_desc.flags |= physx::PxSceneFlag::eENABLE_GPU_DYNAMICS; // Enable GPU rigid body pipeline
+                scene_desc.broadPhaseType = physx::PxBroadPhaseType::eGPU;    // Use GPU-based broad phase
+                RF_PHYSICS_INFO("PhysicsEngine: PxSceneDesc configured for GPU simulation.");
+            }
+            else {
+                scene_desc.broadPhaseType = physx::PxBroadPhaseType::ePABP; // A good default CPU broadphase
+                // Ensure GPU dynamics flag is NOT set if CUDA context is not valid/available
+                scene_desc.flags &= ~physx::PxSceneFlag::eENABLE_GPU_DYNAMICS;
+                RF_PHYSICS_INFO("PhysicsEngine: PxSceneDesc configured for CPU simulation.");
+            }
 
             m_scene = m_physics->createScene(scene_desc);
-            if (!m_scene) { /* ... */ return false; }
-            RF_PHYSICS_INFO("PhysicsEngine: PxScene created. Gravity: ({}, {}, {})", gravityVec.x(), gravityVec.y(), gravityVec.z());
+            if (!m_scene) {
+                RF_PHYSICS_CRITICAL("PhysicsEngine: m_physics->createScene failed!");
+                Shutdown(); // Call full shutdown
+                return false;
+            }
+            RF_PHYSICS_INFO("PhysicsEngine: PxScene created. Gravity: ({:.2f}, {:.2f}, {:.2f})", gravityVec.x(), gravityVec.y(), gravityVec.z());
 
-            if (m_pvd && m_scene->getScenePvdClient()) { /* ... PVD scene flags ... */ }
+            // Configure PVD client for the scene if PVD is connected
+            if (m_pvd && m_pvd->isConnected()) {
+                physx::PxPvdSceneClient* pvdClient = m_scene->getScenePvdClient();
+                if (pvdClient) {
+                    pvdClient->setScenePvdFlag(physx::PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true);
+                    pvdClient->setScenePvdFlag(physx::PxPvdSceneFlag::eTRANSMIT_CONTACTS, true); // Useful for debugging collisions
+                    pvdClient->setScenePvdFlag(physx::PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
+                }
+            }
 
-            m_default_material = m_physics->createMaterial(0.5f, 0.5f, 0.1f);
-            if (!m_default_material) { /* ... */ return false; }
+            // 8. Create Default Material
+            m_default_material = m_physics->createMaterial(0.5f, 0.5f, 0.1f); // staticFriction, dynamicFriction, restitution
+            if (!m_default_material) {
+                RF_PHYSICS_CRITICAL("PhysicsEngine: Default PxMaterial creation failed!");
+                Shutdown();
+                return false;
+            }
             RF_PHYSICS_INFO("PhysicsEngine: Default PxMaterial created.");
 
+            // 9. Create Controller Manager
             m_controller_manager = PxCreateControllerManager(*m_scene);
-            if (!m_controller_manager) { /* ... */ return false; }
+            if (!m_controller_manager) {
+                RF_PHYSICS_CRITICAL("PhysicsEngine: PxCreateControllerManager failed!");
+                Shutdown();
+                return false;
+            }
             RF_PHYSICS_INFO("PhysicsEngine: PxControllerManager created.");
+
+            // Initialize default query filter data (if needed for common queries)
+            m_default_query_filter_data = physx::PxQueryFilterData(); // All zeros, no specific flags
+            // m_default_query_filter_data.flags = physx::PxQueryFlag::eSTATIC | physx::PxQueryFlag::eDYNAMIC | physx::PxQueryFlag::ePREFILTER; // Example
 
             RF_PHYSICS_INFO("PhysicsEngine: Initialization successful.");
             return true;
@@ -607,8 +734,8 @@ namespace RiftForged {
                 // Create PxCookingParams locally using m_physics's tolerances scale
                 physx::PxCookingParams params(m_physics->getTolerancesScale());
                 // Configure params if needed (e.g., for mesh precomputation options)
-                // params.meshPreprocessParams |= physx::PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH;
-                // params.midphaseDesc = physx::PxMeshMidPhase::eBVH34; // Example customization
+                params.meshPreprocessParams |= physx::PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH;
+                params.midphaseDesc = physx::PxMeshMidPhase::eBVH34; // Example customization
 
                 physx::PxTriangleMeshCookingResult::Enum cooking_result_enum;
                 // Use C-API PxCreateTriangleMesh

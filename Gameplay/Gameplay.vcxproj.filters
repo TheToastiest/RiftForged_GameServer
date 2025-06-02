@@ -133,6 +133,15 @@
     <Filter Include="Abilities\BasicCombat\CombatSystem">
       <UniqueIdentifier>{a37e00cb-4b06-4366-81ad-607d92253d4f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Entities\NPCs\MonsterManager">
+      <UniqueIdentifier>{9fdc03b7-4bb5-4b01-8c30-f8f3b13f1449}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities\NPCs\NPCManager">
+      <UniqueIdentifier>{b8385e85-58ac-4cc4-9dbf-ea4474b0b7e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Stubs">
+      <UniqueIdentifier>{ca7d21d2-521b-4ab8-b121-687fbc7f6606}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PlayerManager.cpp">
@@ -155,9 +164,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ActivePlayer.h">
-      <Filter>Entities\Player\ActivePlayer</Filter>
-    </ClInclude>
     <ClInclude Include="RiftStepLogic.h">
       <Filter>Abilities\RiftStepLogic</Filter>
     </ClInclude>
@@ -187,6 +193,12 @@
     </ClInclude>
     <ClInclude Include="RiftPoint.h">
       <Filter>World\RiftPoint\RiftPointManager</Filter>
+    </ClInclude>
+    <ClInclude Include="GameplayStubs.h">
+      <Filter>Core\Stubs</Filter>
+    </ClInclude>
+    <ClInclude Include="ActivePlayer.h">
+      <Filter>Entities\Player\ActivePlayer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

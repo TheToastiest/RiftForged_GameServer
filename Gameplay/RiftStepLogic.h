@@ -9,10 +9,10 @@
 #include <optional>
 
 // Assuming V0.0.3 generated headers are in this path structure
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h"
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h"
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h"
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h"
 // C2S include not strictly needed for these definitions, but good for context
- #include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h"
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h"
 
 namespace RiftForged {
     namespace GameLogic {
@@ -108,7 +108,7 @@ namespace RiftForged {
             NatureShieldExit,               // Verdant Pact: Shield + optional minor healing aura [cite: 1]
             Rapid연속이동,                   // Riftborn Covenant: Rapid Consecutive Movement
             StealthEntrance,                // Stealth variant
-            GravityWarpEntrance,            // Advanced: Modifies gravity
+            GravityWarpEntrance ,            // Advanced: Modifies gravity
             TimeDilationExit,               // Advanced: Modifies time flow
         };
 
@@ -224,6 +224,8 @@ namespace RiftForged {
             bool success = false;
             std::string failure_reason_code; // e.g., "ON_COOLDOWN", "INVALID_TARGET", "OBSTRUCTED"
             ERiftStepType type_executed = ERiftStepType::None;
+
+            uint64_t instigator_entity_id = 0; // <<< ADDED/CONFIRMED THIS MEMBER
 
             RiftForged::Networking::Shared::Vec3 actual_start_position{ 0.0f, 0.0f, 0.0f };
             RiftForged::Networking::Shared::Vec3 intended_target_position{ 0.0f, 0.0f, 0.0f };

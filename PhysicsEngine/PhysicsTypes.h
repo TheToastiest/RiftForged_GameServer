@@ -19,13 +19,13 @@ namespace RiftForged {
             LARGE_ENEMY = 4,
             HUGE_ENEMY = 5,
 
-			RAID_BOSS = 7, // Special large enemy type, could be dynamic or static
+            RAID_BOSS = 7, // Special large enemy type, could be dynamic or static
 
             VAELITH = 10,
-			// Dynamic World Elements
+            // Dynamic World Elements
             COMET = 11,
             MAGIC_PROJECTILE = 12,
-			LIGHTNING_BOLT = 13,
+            LIGHTNING_BOLT = 13,
 
 
             // Static World Elements
@@ -46,17 +46,17 @@ namespace RiftForged {
         };
 
         enum class ECollisionGroup : physx::PxU32 {
-            GROUP_NONE            = 0,          // Belongs to no specific group (or use for "don't care")
-            GROUP_PLAYER          = (1u << 0),  // Actor is a player
-            GROUP_ENEMY           = (1u << 1),  // Actor is an enemy (can be refined for different enemy types if needed)
+            GROUP_NONE = 0,          // Belongs to no specific group (or use for "don't care")
+            GROUP_PLAYER = (1u << 0),  // Actor is a player
+            GROUP_ENEMY = (1u << 1),  // Actor is an enemy (can be refined for different enemy types if needed)
             GROUP_PLAYER_PROJECTILE = (1u << 2),  // Projectile fired by players
-            GROUP_ENEMY_PROJECTILE  = (1u << 3),  // Projectile fired by enemies
-            GROUP_WORLD_STATIC    = (1u << 4),  // Walls, ground, static impassable geometry
-            GROUP_WORLD_DYNAMIC   = (1u << 5),  // Pushable rocks, dynamic physics props
-            GROUP_MELEE_HITBOX    = (1u << 6),  // A hitbox for a melee attack (often a trigger)
-            GROUP_COMET           = (1u << 7),  // Special dynamic element like comets
-            GROUP_VAELITH         = (1u << 8),  // Special Vaelith type
-            GROUP_RAID_BOSS       = (1u << 9),  // Raid boss specific group
+            GROUP_ENEMY_PROJECTILE = (1u << 3),  // Projectile fired by enemies
+            GROUP_WORLD_STATIC = (1u << 4),  // Walls, ground, static impassable geometry
+            GROUP_WORLD_DYNAMIC = (1u << 5),  // Pushable rocks, dynamic physics props
+            GROUP_MELEE_HITBOX = (1u << 6),  // A hitbox for a melee attack (often a trigger)
+            GROUP_COMET = (1u << 7),  // Special dynamic element like comets
+            GROUP_VAELITH = (1u << 8),  // Special Vaelith type
+            GROUP_RAID_BOSS = (1u << 9),  // Raid boss specific group
 
             // Add more groups as needed, up to 32 unique bits.
             // For example:

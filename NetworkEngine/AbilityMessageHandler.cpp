@@ -1,8 +1,8 @@
 ﻿#include "AbilityMessageHandler.h"
 // Generated FlatBuffer headers (adjust path to your SharedProtocols/Generated/ folder)
-#include "../FlatBuffers/V0.0.3/riftforged_c2s_udp_messages_generated.h"
-#include "../FlatBuffers/V0.0.3/riftforged_s2c_udp_messages_generated.h" // For S2C_RiftStepExecutedMsg
-#include "../FlatBuffers/V0.0.3/riftforged_common_types_generated.h" // For Vec3, Quaternion, etc.
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h"
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // For S2C_RiftStepExecutedMsg
+#include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h" // For Vec3, Quaternion, etc.
 #include "../Gameplay/PlayerManager.h"
 #include "../Gameplay/ActivePlayer.h"
 #include "../Gameplay/GameplayEngine.h"
@@ -25,6 +25,7 @@ namespace RiftForged {
 
                 std::optional<RiftForged::Networking::S2C_Response> AbilityMessageHandler::Process(
                     const NetworkEndpoint& sender_endpoint,
+					GameLogic::ActivePlayer* player, // Added ActivePlayer pointer
                     const C2S_UseAbilityMsg* message) {
                     if (!message) {
                         std::cerr << "AbilityMessageHandler: Null message from " << sender_endpoint.ToString() << std::endl;

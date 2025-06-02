@@ -10,7 +10,7 @@
 namespace RiftForged {
     namespace GameLogic {
         class PlayerManager;    //
-        struct ActivePlayer;     // <<< ADDED: Forward declaration for ActivePlayer
+        struct ActivePlayer;     //
     }
     namespace Gameplay {
         class GameplayEngine;   //

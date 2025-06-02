@@ -39,6 +39,7 @@ namespace RiftForged {
                     // Process now returns an optional response to send
                     std::optional<S2C_Response> Process(
                         const RiftForged::Networking::NetworkEndpoint& sender_endpoint,
+						RiftForged::GameLogic::ActivePlayer* player, // Ensure this is passed for context
                         const C2S_PingMsg* message
                     );
                     // NO m_udpSocket member anymore
