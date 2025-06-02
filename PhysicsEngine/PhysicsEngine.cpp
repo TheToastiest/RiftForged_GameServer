@@ -142,7 +142,7 @@ namespace RiftForged {
 
             if (m_foundation) {
                 RF_PHYSICS_WARN("PhysicsEngine: Already initialized. Please call Shutdown() first if re-initialization is intended.");
-                return true; // Or false, depending on desired behavior for re-initialization attempts
+                return true;
             }
 
             // 1. Create Foundation
@@ -156,7 +156,7 @@ namespace RiftForged {
             // 2. Setup PVD (PhysX Visual Debugger) Connection
             if (connect_to_pvd) {
                 RF_PHYSICS_INFO("PhysicsEngine: Attempting to connect to PhysX Visual Debugger (PVD)...");
-                if (!m_pvd_transport) { // Only create a new transport if one wasn't set externally
+                if (!m_pvd_transport) {
                     m_pvd_transport = physx::PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 10);
                     if (!m_pvd_transport) {
                         RF_PHYSICS_WARN("PhysicsEngine: PxDefaultPvdSocketTransportCreate failed. PVD connection skipped.");
@@ -164,16 +164,13 @@ namespace RiftForged {
                 }
 
                 if (m_pvd_transport) {
-                    if (!m_pvd) m_pvd = physx::PxCreatePvd(*m_foundation); // Create PVD if it doesn't exist
+                    if (!m_pvd) m_pvd = physx::PxCreatePvd(*m_foundation);
                     if (m_pvd) {
                         if (m_pvd->connect(*m_pvd_transport, physx::PxPvdInstrumentationFlag::eALL)) {
                             RF_PHYSICS_INFO("PhysicsEngine: PVD connection successful.");
                         }
                         else {
                             RF_PHYSICS_WARN("PhysicsEngine: PVD connect failed. PVD will not be available.");
-                            // Don't release transport if it might have been set externally and only connect failed
-                            // If we created the PVD object and connect failed, we might release PVD object here
-                            // For simplicity, we keep m_pvd and m_pvd_transport; they just won't be connected.
                         }
                     }
                     else {
@@ -189,8 +186,8 @@ namespace RiftForged {
             }
 
             // 3. Create Physics Main Object (PxPhysics)
-            physx::PxTolerancesScale tolerances_scale; // Use default scale
-            bool recordMemoryAllocations = true; // Useful for debugging, can be false for release
+            physx::PxTolerancesScale tolerances_scale;
+            bool recordMemoryAllocations = true;
             m_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation, tolerances_scale, recordMemoryAllocations, m_pvd);
             if (!m_physics) {
                 RF_PHYSICS_CRITICAL("PhysicsEngine: PxCreatePhysics failed!");
@@ -202,7 +199,7 @@ namespace RiftForged {
             }
             RF_PHYSICS_INFO("PhysicsEngine: PxPhysics created successfully.");
 
-            // 4. Initialize Extensions (Required for many features like character controllers, cooking at runtime if needed)
+            // 4. Initialize Extensions
             if (!PxInitExtensions(*m_physics, m_pvd)) {
                 RF_PHYSICS_CRITICAL("PhysicsEngine: PxInitExtensions failed!");
                 // Partial shutdown:
@@ -214,13 +211,26 @@ namespace RiftForged {
             }
             RF_PHYSICS_INFO("PhysicsEngine: PxExtensions initialized successfully.");
 
+            // >>> MOVED FROM LATER (was step 8): Create Default Material <<<
+            // Create this early so it's available for static geometry.
+            m_default_material = m_physics->createMaterial(0.5f, 0.5f, 0.1f); // staticFriction, dynamicFriction, restitution
+            if (!m_default_material) {
+                RF_PHYSICS_CRITICAL("PhysicsEngine: Default PxMaterial creation failed!");
+                Shutdown(); // Call full shutdown for simplicity
+                return false;
+            }
+            RF_PHYSICS_INFO("PhysicsEngine: Default PxMaterial created.");
+            // You can create other common materials here as well if needed for your static world.
+
             // 5. Setup CUDA Context Manager (for GPU Acceleration)
             bool gpuContextIsValid = false;
             physx::PxCudaContextManagerDesc cudaContextManagerDesc;
             // If you have a D3D device for interop, configure cudaContextManagerDesc.graphicsDevice
             // Example: cudaContextManagerDesc.graphicsDevice = myD3DDevice;
-            // Example: cudaContextManagerDesc.interopMode = physx::PxCudaInteropMode::D3D11_INTEROP;
-            // m_cudaContextManager = PxCreateCudaContextManager(*m_foundation, cudaContextManagerDesc, PxGetProfilerCallback());
+            //cudaContextManagerDesc.interopMode = physx::PxCudaInteropMode::D3D11_INTEROP;
+
+            // Ensure this line is UNCOMMENTED when you want to test GPU acceleration
+            //m_cudaContextManager = PxCreateCudaContextManager(*m_foundation, cudaContextManagerDesc, nullptr /*PxGetProfilerCallback()*/); // Using nullptr for now as per test
 
             if (m_cudaContextManager) {
                 RF_PHYSICS_INFO("PhysicsEngine: PxCudaContextManager created.");
@@ -240,16 +250,15 @@ namespace RiftForged {
 
             // 6. Create CPU Dispatcher
             uint32_t num_hardware_threads = 4; //std::thread::hardware_concurrency();
-            uint32_t num_threads_for_dispatcher = (num_hardware_threads > 1) ? num_hardware_threads - 1 : 4; // Leave 4 cores for main thread/testing
-            if (num_hardware_threads == 0) { // Should not happen, but as a fallback
+            uint32_t num_threads_for_dispatcher = (num_hardware_threads > 1) ? num_hardware_threads - 1 : 4;
+            if (num_hardware_threads == 0) {
                 RF_PHYSICS_WARN("PhysicsEngine: Could not determine hardware concurrency or 0 reported, defaulting CPU dispatcher to 1 thread.");
                 num_threads_for_dispatcher = 1;
             }
             m_dispatcher = physx::PxDefaultCpuDispatcherCreate(num_threads_for_dispatcher);
             if (!m_dispatcher) {
                 RF_PHYSICS_CRITICAL("PhysicsEngine: PxDefaultCpuDispatcherCreate failed!");
-                // Partial shutdown... (similar to above failures)
-                Shutdown(); // Call full shutdown for simplicity if this critical component fails
+                Shutdown();
                 return false;
             }
             RF_PHYSICS_INFO("PhysicsEngine: PxDefaultCpuDispatcher created with {} threads (Hardware reported: {}).",
@@ -257,27 +266,24 @@ namespace RiftForged {
 
             // 7. Create Scene (PxScene)
             physx::PxSceneDesc scene_desc(m_physics->getTolerancesScale());
-            scene_desc.gravity = ToPxVec3(gravityVec); // Use conversion from PhysicsTypes.h
+            scene_desc.gravity = ToPxVec3(gravityVec);
             scene_desc.cpuDispatcher = m_dispatcher;
-            scene_desc.filterShader = CustomFilterShader; // Your custom collision filter shader
-            // scene_desc.simulationEventCallback = this; // Assign 'this' if PhysicsEngine implements PxSimulationEventCallback
-            // scene_desc.contactModifyCallback = ...;   // If using contact modification
-            // scene_desc.ccdContactModifyCallback = ...; // If using CCD contact modification
+            scene_desc.filterShader = CustomFilterShader;
+            // scene_desc.simulationEventCallback = this; 
 
-            scene_desc.flags |= physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS; // To get list of active actors
-            scene_desc.flags |= physx::PxSceneFlag::eENABLE_PCM;           // Enable Persistent Contact Manifold (better stability)
-            scene_desc.flags |= physx::PxSceneFlag::eENABLE_STABILIZATION; // Helps with stacking and resting object stability
+            scene_desc.flags |= physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS;
+            scene_desc.flags |= physx::PxSceneFlag::eENABLE_PCM;
+            scene_desc.flags |= physx::PxSceneFlag::eENABLE_STABILIZATION;
 
             // Configure scene for GPU or CPU based on CudaContextManager status
-            if (gpuContextIsValid && m_cudaContextManager) { // Double check m_cudaContextManager is still valid
+            if (gpuContextIsValid && m_cudaContextManager) {
                 scene_desc.cudaContextManager = m_cudaContextManager;
-                scene_desc.flags |= physx::PxSceneFlag::eENABLE_GPU_DYNAMICS; // Enable GPU rigid body pipeline
-                scene_desc.broadPhaseType = physx::PxBroadPhaseType::eGPU;    // Use GPU-based broad phase
+                scene_desc.flags |= physx::PxSceneFlag::eENABLE_GPU_DYNAMICS;
+                scene_desc.broadPhaseType = physx::PxBroadPhaseType::eGPU;
                 RF_PHYSICS_INFO("PhysicsEngine: PxSceneDesc configured for GPU simulation.");
             }
             else {
-                scene_desc.broadPhaseType = physx::PxBroadPhaseType::ePABP; // A good default CPU broadphase
-                // Ensure GPU dynamics flag is NOT set if CUDA context is not valid/available
+                scene_desc.broadPhaseType = physx::PxBroadPhaseType::ePABP;
                 scene_desc.flags &= ~physx::PxSceneFlag::eENABLE_GPU_DYNAMICS;
                 RF_PHYSICS_INFO("PhysicsEngine: PxSceneDesc configured for CPU simulation.");
             }
@@ -285,7 +291,7 @@ namespace RiftForged {
             m_scene = m_physics->createScene(scene_desc);
             if (!m_scene) {
                 RF_PHYSICS_CRITICAL("PhysicsEngine: m_physics->createScene failed!");
-                Shutdown(); // Call full shutdown
+                Shutdown();
                 return false;
             }
             RF_PHYSICS_INFO("PhysicsEngine: PxScene created. Gravity: ({:.2f}, {:.2f}, {:.2f})", gravityVec.x(), gravityVec.y(), gravityVec.z());
@@ -295,21 +301,40 @@ namespace RiftForged {
                 physx::PxPvdSceneClient* pvdClient = m_scene->getScenePvdClient();
                 if (pvdClient) {
                     pvdClient->setScenePvdFlag(physx::PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true);
-                    pvdClient->setScenePvdFlag(physx::PxPvdSceneFlag::eTRANSMIT_CONTACTS, true); // Useful for debugging collisions
+                    pvdClient->setScenePvdFlag(physx::PxPvdSceneFlag::eTRANSMIT_CONTACTS, true);
                     pvdClient->setScenePvdFlag(physx::PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
                 }
             }
 
-            // 8. Create Default Material
-            m_default_material = m_physics->createMaterial(0.5f, 0.5f, 0.1f); // staticFriction, dynamicFriction, restitution
-            if (!m_default_material) {
-                RF_PHYSICS_CRITICAL("PhysicsEngine: Default PxMaterial creation failed!");
-                Shutdown();
-                return false;
-            }
-            RF_PHYSICS_INFO("PhysicsEngine: Default PxMaterial created.");
+            // LINE BEFORE for adding Heightfield/Static Meshes
+            // >>> YOUR CODE FOR CREATING AND ADDING STATIC WORLD GEOMETRY (e.g., PxHeightField, PxTriangleMesh actors) TO m_scene WOULD GO HERE <<<
+            // This is where you'd call functions to:
+            // 1. Load heightmap data (from your PNG, processed by your "plugin system").
+            // 2. Call a PhysicsEngine method (you'll create this) like:
+            //    CreateHeightFieldActor(m_scene, loadedHeightmapData, PxTransform(PxIdentity), *m_default_material);
+            // 3. Load model data for buildings/rocks.
+            // 4. Cook them into PxTriangleMesh.
+            // 5. Call a PhysicsEngine method like:
+            //    CreateTriangleMeshActor(m_scene, cookedMeshData, PxTransform(position), *m_default_material); // (or a specific material)
+            //
+            // Example placeholder:
+                /*
+                if (m_scene && m_default_material) {
+                    // For a basic flat ground plane using PxPlane (simpler than full heightfield initially for testing)
+                    // physx::PxRigidStatic* groundPlane = physx::PxCreatePlane(*m_physics, physx::PxPlane(0,0,1,0), *m_default_material); // Assuming Z is up
+                    // if (groundPlane) {
+                    //     m_scene->addActor(*groundPlane);
+                    //     // groundPlane->release(); // Scene owns it now
+                    //     RF_PHYSICS_INFO("PhysicsEngine: Basic static ground plane added to scene.");
+                    // } else {
+                    //     RF_PHYSICS_ERROR("PhysicsEngine: Failed to create basic ground plane.");
+                    // }
+                    RF_PHYSICS_INFO("PhysicsEngine: Placeholder for static world geometry creation.");
+                }
+                */
+                // LINE AFTER for adding Heightfield/Static Meshes
 
-            // 9. Create Controller Manager
+                    // 9. Create Controller Manager (was step 8, but default material creation moved up)
             m_controller_manager = PxCreateControllerManager(*m_scene);
             if (!m_controller_manager) {
                 RF_PHYSICS_CRITICAL("PhysicsEngine: PxCreateControllerManager failed!");
@@ -319,7 +344,7 @@ namespace RiftForged {
             RF_PHYSICS_INFO("PhysicsEngine: PxControllerManager created.");
 
             // Initialize default query filter data (if needed for common queries)
-            m_default_query_filter_data = physx::PxQueryFilterData(); // All zeros, no specific flags
+            m_default_query_filter_data = physx::PxQueryFilterData();
             // m_default_query_filter_data.flags = physx::PxQueryFlag::eSTATIC | physx::PxQueryFlag::eDYNAMIC | physx::PxQueryFlag::ePREFILTER; // Example
 
             RF_PHYSICS_INFO("PhysicsEngine: Initialization successful.");

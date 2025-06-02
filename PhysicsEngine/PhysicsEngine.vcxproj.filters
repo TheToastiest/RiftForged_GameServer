@@ -16,6 +16,9 @@
     <Filter Include="Fixing">
       <UniqueIdentifier>{fbdad355-b766-4fca-9aed-bcf7be55a44b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="WorldTypes">
+      <UniqueIdentifier>{0a2faaa5-0902-42d6-ad69-2ea2b0c40906}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PhysicsEngine.h">
@@ -26,6 +29,9 @@
     </ClInclude>
     <ClInclude Include="FixPhysicsEngine.h">
       <Filter>Fixing</Filter>
+    </ClInclude>
+    <ClInclude Include="WorldTypes.h">
+      <Filter>WorldTypes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

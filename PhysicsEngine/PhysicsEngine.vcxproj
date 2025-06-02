@@ -137,6 +137,7 @@
     <ClInclude Include="FixPhysicsEngine.h" />
     <ClInclude Include="PhysicsEngine.h" />
     <ClInclude Include="PhysicsTypes.h" />
+    <ClInclude Include="WorldTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FixPhysicsEngine.cpp" />
