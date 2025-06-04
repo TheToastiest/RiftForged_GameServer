@@ -52,9 +52,6 @@
     <Filter Include="PacketManagement\Serialization\FlatBuffers\MessageHandlers">
       <UniqueIdentifier>{f46cbf82-2e2b-4278-9891-651f17328a1c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="PacketManagement\FlatBufferPayloads">
-      <UniqueIdentifier>{ebf57fd8-43e8-4584-9679-4fa7d3f138d0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Networking\NetworkEndpoint">
       <UniqueIdentifier>{32e05806-e517-471b-81df-3cc6d718eaf0}</UniqueIdentifier>
     </Filter>
@@ -79,9 +76,6 @@
     </Filter>
     <Filter Include="Networking\SocketHandling\UDPSocketAsync">
       <UniqueIdentifier>{a83618d8-8647-4eeb-b58e-fe5610dfb411}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Networking\SocketHandling\NetworkBuffer">
-      <UniqueIdentifier>{32c806eb-0d48-4187-86e9-9688dab7011a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Networking\INetworkIO">
       <UniqueIdentifier>{4a6fd338-6622-417e-8097-10d08ae207c4}</UniqueIdentifier>
@@ -125,6 +119,9 @@
     </Filter>
     <Filter Include="Networking\PacketProcessor">
       <UniqueIdentifier>{fc0bd84d-8795-4683-8950-b0d023df7973}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dispatch\Handlers_C2S\JoinRequestMessageHandler">
+      <UniqueIdentifier>{43f49680-aef5-4b96-aeb4-448f66ddc1bd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -203,6 +200,12 @@
     <ClInclude Include="IMessageHandler.h">
       <Filter>Dispatch\IMessageHandler</Filter>
     </ClInclude>
+    <ClInclude Include="JoinRequestMessageHandler.h">
+      <Filter>Dispatch\Handlers_C2S\JoinRequestMessageHandler</Filter>
+    </ClInclude>
+    <ClInclude Include="ReliableConnectionState.h">
+      <Filter>Networking\Reliability</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -247,11 +250,14 @@
     <ClCompile Include="BasicAttackMessageHandler.cpp">
       <Filter>Dispatch\Handlers_C2S\BasicAttackMessageHandler</Filter>
     </ClCompile>
-    <ClCompile Include="UDPReliabilityProtocol.cpp">
-      <Filter>Networking\Reliability\UDPReliabilityProtocol</Filter>
-    </ClCompile>
     <ClCompile Include="UDPPacketHandler.cpp">
       <Filter>Networking\UDPPacketHandler</Filter>
+    </ClCompile>
+    <ClCompile Include="JoinRequestMessageHandler.cpp">
+      <Filter>Dispatch\Handlers_C2S\JoinRequestMessageHandler</Filter>
+    </ClCompile>
+    <ClCompile Include="UDPReliabilityProtocol.cpp">
+      <Filter>Networking\Reliability\UDPReliabilityProtocol</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

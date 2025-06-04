@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ThreadPool">
+      <UniqueIdentifier>{b2453f5a-32ad-43f1-811b-995b4a2dc695}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MathUtil.h">
@@ -21,6 +24,9 @@
     <ClInclude Include="Logger.h">
       <Filter>Logger</Filter>
     </ClInclude>
+    <ClInclude Include="ThreadPool.h">
+      <Filter>ThreadPool</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MathUtil.cpp">
@@ -28,6 +34,9 @@
     </ClCompile>
     <ClCompile Include="Logger.cpp">
       <Filter>Logger</Filter>
+    </ClCompile>
+    <ClCompile Include="ThreadPool.cpp">
+      <Filter>ThreadPool</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

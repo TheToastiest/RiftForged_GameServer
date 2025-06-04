@@ -230,7 +230,7 @@ namespace RiftForged {
             //cudaContextManagerDesc.interopMode = physx::PxCudaInteropMode::D3D11_INTEROP;
 
             // Ensure this line is UNCOMMENTED when you want to test GPU acceleration
-            //m_cudaContextManager = PxCreateCudaContextManager(*m_foundation, cudaContextManagerDesc, nullptr /*PxGetProfilerCallback()*/); // Using nullptr for now as per test
+            m_cudaContextManager = PxCreateCudaContextManager(*m_foundation, cudaContextManagerDesc, nullptr /*PxGetProfilerCallback()*/); // Using nullptr for now as per test
 
             if (m_cudaContextManager) {
                 RF_PHYSICS_INFO("PhysicsEngine: PxCudaContextManager created.");

@@ -26,24 +26,94 @@ namespace RiftForged {
     namespace Server {
 
         GameServerEngine::GameServerEngine(
-           RiftForged::GameLogic::PlayerManager& playerManager,
-           RiftForged::Gameplay::GameplayEngine& gameplayEngine,
-           //RiftForged::Networking::UDPPacketHandler& packetHandler,
-           RiftForged::Physics::PhysicsEngine& physicsEngine,
-           std::chrono::milliseconds tickInterval)
-           : m_playerManager(playerManager),
-             m_gameplayEngine(gameplayEngine),
-             m_packetHandlerPtr(nullptr), // Initialize m_packetHandlerPtr to nullptr
-             m_physicsEngine(physicsEngine),
-             m_isSimulatingThread(false),
-             m_tickIntervalMs(tickInterval),
-             m_timerResolutionWasSet(false) {
-           RF_CORE_INFO("GameServerEngine: Constructed. Tick Interval: {}ms", m_tickIntervalMs.count());
+            RiftForged::GameLogic::PlayerManager& playerManager,
+            RiftForged::Gameplay::GameplayEngine& gameplayEngine,
+            RiftForged::Physics::PhysicsEngine& physicsEngine,
+            size_t numThreadPoolThreads, // Changed parameter
+            std::chrono::milliseconds tickInterval)
+            : m_playerManager(playerManager),
+            m_gameplayEngine(gameplayEngine),
+            m_packetHandlerPtr(nullptr),
+            m_physicsEngine(physicsEngine),
+            m_gameLogicThreadPool(numThreadPoolThreads), // Initialized directly here
+            m_isSimulatingThread(false),
+            m_tickIntervalMs(tickInterval),
+            m_timerResolutionWasSet(false) {
+            RF_CORE_INFO("GameServerEngine: Constructed. Tick Interval: {}ms", m_tickIntervalMs.count());
         }
 
         GameServerEngine::~GameServerEngine() {
             RF_CORE_INFO("GameServerEngine: Destructor called. Ensuring simulation loop is stopped.");
             StopSimulationLoop();
+        }
+
+        bool GameServerEngine::Initialize() {
+            RF_CORE_INFO("GameServerEngine: Initializing...");
+
+            // The Game Logic Thread Pool is now constructed in the GameServerEngine constructor.
+            // We can log its thread count here to confirm its state.
+            RF_CORE_INFO("GameServerEngine: GameLogicThreadPool active with {} threads.", m_gameLogicThreadPool.getThreadCount());
+
+            // Potentially initialize other systems here if needed before simulation starts
+            // For example, loading static data, configuring gameplay engine further, etc.
+
+            RF_CORE_INFO("GameServerEngine: Initialization complete.");
+            return true;
+        }
+
+        void GameServerEngine::Shutdown() {
+            RF_CORE_INFO("GameServerEngine: Shutting down...");
+
+            // Ensure simulation loop is stopped first
+            if (m_isSimulatingThread.load(std::memory_order_relaxed)) {
+                StopSimulationLoop(); // This will join the simulation thread
+            }
+            else {
+                // If simulation thread wasn't running but might have been created and not joined (e.g. failed StartSimulationLoop)
+                if (m_simulationThread.joinable() && m_simulationThread.get_id() != std::this_thread::get_id()) {
+                    // Ensure it's signaled to exit and join it.
+                    // This condition might be redundant if StopSimulationLoop() handles all cases,
+                    // but it provides a safeguard if Shutdown is called after a failed StartSimulationLoop.
+                    m_isSimulatingThread.store(false, std::memory_order_release); // Ensure flag is set for cv
+                    m_shutdownThreadCv.notify_one();
+                    m_simulationThread.join();
+                    RF_CORE_INFO("GameServerEngine: Lingering simulation thread joined during Shutdown.");
+                }
+            }
+
+            // Shutdown Game Logic Thread Pool
+            // Since m_gameLogicThreadPool is a direct member, its destructor will call stop() implicitly.
+            // However, explicitly calling stop() here ensures it happens before other potential dependencies are cleaned up.
+            // No need for 'if (m_gameLogicThreadPool)' or 'm_gameLogicThreadPool.reset()'.
+            RF_CORE_INFO("GameServerEngine: Stopping GameLogicThreadPool...");
+            m_gameLogicThreadPool.stop();
+            RF_CORE_INFO("GameServerEngine: GameLogicThreadPool stopped.");
+
+
+            // Clean up Windows timer resolution if it was set
+#ifdef _WIN32
+            if (m_timerResolutionWasSet) { // Check if it was successfully set
+                MMRESULT endResult = timeEndPeriod(1);
+                if (endResult != TIMERR_NOERROR) {
+                    RF_CORE_ERROR("GameServerEngine: Failed to restore timer resolution during Shutdown. Error code: {}", endResult);
+                }
+                else {
+                    RF_CORE_INFO("GameServerEngine: Timer resolution successfully restored during Shutdown.");
+                }
+                m_timerResolutionWasSet = false; // Mark as restored
+            }
+#endif
+            RF_CORE_INFO("GameServerEngine: Shutdown complete.");
+        }
+
+        // Corrected return type and implementation for GetGameLogicThreadPool()
+        RF_ThreadPool::TaskThreadPool& GameServerEngine::GetGameLogicThreadPool() {
+            return m_gameLogicThreadPool;
+        }
+
+        // Corrected return type and implementation for const GetGameLogicThreadPool()
+        const RF_ThreadPool::TaskThreadPool& GameServerEngine::GetGameLogicThreadPool() const {
+            return m_gameLogicThreadPool;
         }
 
         RiftForged::GameLogic::PlayerManager& GameServerEngine::GetPlayerManager() {
@@ -169,6 +239,14 @@ namespace RiftForged {
             }
         }
 
+        uint16_t GameServerEngine::GetServerTickRateHz() const {
+            if (m_tickIntervalMs.count() > 0) {
+                // Tick rate in Hz = 1000 milliseconds / tick_interval_in_milliseconds
+                return static_cast<uint16_t>(1000 / m_tickIntervalMs.count());
+            }
+            // Return a default or handle error if tick interval is zero to avoid division by zero
+            return 0; // Or perhaps throw an exception, or return a default like 60Hz
+        }
 
         // --- Session Management Methods ---
         uint64_t GameServerEngine::OnClientAuthenticatedAndJoining(
@@ -176,7 +254,7 @@ namespace RiftForged {
             const std::string& characterIdToLoad) {
 
             std::string endpointKey = newEndpoint.ToString();
-            RF_CORE_INFO("GameServerEngine: Client joining from endpoint [{}]. Character to load: '{}'", endpointKey, characterIdToLoad.empty() ? "New/Default" : characterIdToLoad);
+            RF_CORE_INFO("GameServerEngine: Client joining from endpoint [%s]. Character to load: '%s'", endpointKey.c_str(), characterIdToLoad.empty() ? "New/Default" : characterIdToLoad.c_str());
 
             uint64_t existingPlayerId = 0;
             {
@@ -184,24 +262,20 @@ namespace RiftForged {
                 auto it = m_endpointKeyToPlayerIdMap.find(endpointKey);
                 if (it != m_endpointKeyToPlayerIdMap.end()) {
                     existingPlayerId = it->second;
-                    RF_CORE_WARN("GameServerEngine: Endpoint [{}] already associated with PlayerId {}. Re-joining logic needed or kick old.", endpointKey, existingPlayerId);
-                    // For simplicity, allow re-association, potentially kicking old session implicitly if new one fully replaces it.
-                    // Or, return existingPlayerId; a more robust system would handle this carefully.
-                    // Let's assume for now we proceed to create a new mapping if characterId is different or some other logic.
-                    // To be safe, if an endpoint is reused, we should probably clean up the old PlayerId associated with it.
-                    // For now, let's simplify and assume it is a genuinely new session for this example.
-                    // If found, it might be better to call OnClientDisconnected for that old player id first.
-                    // For this iteration, if found, we just return it to avoid duplicate PlayerId creation for same endpoint.
+                    RF_CORE_WARN("GameServerEngine: Endpoint [%s] already associated with PlayerId %llu. Client attempting to re-join.", endpointKey.c_str(), existingPlayerId);
+                    // If an endpoint is trying to re-join and is already mapped,
+                    // we return the existing ID. The JoinRequestMessageHandler will then
+                    // interpret this as an "already logged in" scenario and send a JoinFailed.
                     return existingPlayerId;
                 }
             }
 
             uint64_t newPlayerId = m_playerManager.GetNextAvailablePlayerID();
             if (newPlayerId == 0) {
-                RF_CORE_CRITICAL("GameServerEngine: PlayerManager returned invalid new PlayerId (0).");
+                RF_CORE_CRITICAL("GameServerEngine: PlayerManager returned invalid new PlayerId (0). Cannot create player.");
+                // Return 0, indicating failure. JoinRequestMessageHandler will send JoinFailed.
                 return 0;
             }
-
 
             RiftForged::Networking::Shared::Vec3 spawnPos(0.f, 0.f, 1.5f);
             RiftForged::Networking::Shared::Quaternion spawnOrient(0.f, 0.f, 0.f, 1.f);
@@ -209,8 +283,8 @@ namespace RiftForged {
 
             GameLogic::ActivePlayer* player = m_playerManager.CreatePlayer(newPlayerId, spawnPos, spawnOrient);
             if (!player) {
-                RF_CORE_ERROR("GameServerEngine: Failed to create ActivePlayer for PlayerId {}.", newPlayerId);
-                SendJoinFailedResponse(m_packetHandlerPtr, newEndpoint, "Player creation failed.", 1001); // Example reason_code
+                RF_CORE_ERROR("GameServerEngine: Failed to create ActivePlayer for PlayerId %llu. Cannot continue join process.", newPlayerId);
+                // Return 0, indicating failure. JoinRequestMessageHandler will send JoinFailed.
                 return 0;
             }
             {
@@ -219,31 +293,19 @@ namespace RiftForged {
                 m_playerIdToEndpointMap[newPlayerId] = newEndpoint;
             }
 
+            // Initialize the newly created player within the GameplayEngine
             m_gameplayEngine.InitializePlayerInWorld(player, spawnPos, spawnOrient);
 
-            RF_CORE_INFO("GameServerEngine: Player {} successfully created and initialized for endpoint [{}].", newPlayerId, endpointKey);
+            RF_CORE_INFO("GameServerEngine: Player %llu successfully created and initialized for endpoint [%s].", newPlayerId, endpointKey.c_str());
 
-            if (m_packetHandlerPtr) {
-                flatbuffers::FlatBufferBuilder builder;
-                uint16_t tick_rate_hz = static_cast<uint16_t>(1000 / m_tickIntervalMs.count()); // Calculate from interval
-                auto welcome_message = builder.CreateString("Welcome to RiftForged!"); // Or more dynamic
+            // IMPORTANT: Removed direct sending of JoinSuccess/Failed messages from here.
+            // This responsibility is now solely handled by JoinRequestMessageHandler
+            // based on the uint64_t return value of this function.
+            // The previous block that looked like this:
+            // if (m_packetHandlerPtr) { ... m_packetHandlerPtr->SendReliablePacket(...) ... }
+            // HAS BEEN REMOVED.
 
-                auto join_success_payload = RF_S2C::CreateS2C_JoinSuccessMsg(builder,
-                    newPlayerId,
-                    welcome_message,
-                    tick_rate_hz);
-
-                RF_S2C::Root_S2C_UDP_MessageBuilder root_builder(builder);
-                root_builder.add_payload_type(RF_S2C::S2C_UDP_Payload_S2C_JoinSuccessMsg);
-                root_builder.add_payload(join_success_payload.Union());
-                auto root_offset = root_builder.Finish();
-                builder.Finish(root_offset);
-
-                std::vector<uint8_t> payloadBytes(builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
-                // Consider if this should be reliable or unreliable. Join success is usually important.
-                m_packetHandlerPtr->SendReliablePacket(newEndpoint, RF_Net::MessageType::S2C_JoinSuccess, payloadBytes);
-            }
-            return newPlayerId;
+            return newPlayerId; // Return the new player ID (0 for failure)
         }
 
         void GameServerEngine::ProcessDisconnectRequests() {
@@ -340,30 +402,49 @@ namespace RiftForged {
             }
         }
 
-        void GameServerEngine::SendJoinFailedResponse(
-            RF_Net::UDPPacketHandler* packetHandler,
-            const Networking::NetworkEndpoint& recipient,
-            const std::string& reason_message_str,
-            int16_t reason_code) {
-            if (!packetHandler) {
-                RF_CORE_ERROR("GameServerEngine::SendJoinFailedResponse: Packet handler is null. Cannot send to [{}].", recipient.ToString());
-                return;
-            }
-
-            flatbuffers::FlatBufferBuilder builder;
-            auto reason_fb_str = builder.CreateString(reason_message_str);
-            auto join_failed_payload = RF_S2C::CreateS2C_JoinFailedMsg(builder, reason_fb_str, reason_code);
-
-            RF_S2C::Root_S2C_UDP_MessageBuilder root_builder(builder);
-            root_builder.add_payload_type(RF_S2C::S2C_UDP_Payload_S2C_JoinFailedMsg);
-            root_builder.add_payload(join_failed_payload.Union());
-            auto root_offset = root_builder.Finish();
-            builder.Finish(root_offset);
-
-            std::vector<uint8_t> payloadBytes(builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
-            packetHandler->SendReliablePacket(recipient, RF_Net::MessageType::S2C_JoinFailed, payloadBytes);
-            RF_CORE_INFO("GameServerEngine: Sent JoinFailed (Code: {}) to [{}] Reason: {}", reason_code, recipient.ToString(), reason_message_str);
+        bool GameServerEngine::isSimulating() const {
+            // Use std::memory_order_acquire for consistency with how the flag is often read
+            // in conditions that control thread joining or loop continuation.
+            // std::memory_order_relaxed would also be acceptable if this getter
+            // doesn't need to synchronize-with writes in specific advanced scenarios.
+            return m_isSimulatingThread.load(std::memory_order_acquire);
         }
+
+        //void GameServerEngine::SendJoinFailedResponse(
+        //    RF_Net::UDPPacketHandler* packetHandler,
+        //    const Networking::NetworkEndpoint& recipient,
+        //    const std::string& reason_message_str,
+        //    int16_t reason_code) {
+
+        //    if (!packetHandler) {
+        //        RF_CORE_ERROR("GameServerEngine::SendJoinFailedResponse: Packet handler is null. Cannot send JoinFailed to [%s].", recipient.ToString().c_str());
+        //        return;
+        //    }
+
+        //    flatbuffers::FlatBufferBuilder builder;
+        //    auto reason_fb_str = builder.CreateString(reason_message_str);
+        //    auto join_failed_payload = RF_S2C::CreateS2C_JoinFailedMsg(builder, reason_fb_str, reason_code);
+
+        //    auto root_s2c_message = RF_S2C::CreateRoot_S2C_UDP_Message(builder,
+        //        RF_S2C::S2C_UDP_Payload_S2C_JoinFailedMsg,
+        //        join_failed_payload.Union()
+        //    );
+        //    builder.Finish(root_s2c_message);
+
+        //    // The packetHandler->SendReliablePacket expects flatbuffers::DetachedBuffer for payload.
+        //    // We need to create an S2C_Response object and populate it, then let PacketHandler handle sending.
+        //    // Or, if UDPPacketHandler has an overload that takes a DetachedBuffer directly:
+        //    // packetHandler->SendReliablePacket(recipient, RF_S2C::S2C_UDP_Payload::S2C_UDP_Payload_S2C_JoinFailedMsg, builder.Release());
+        //    // This is the preferred way to interact with UDPPacketHandler's public API.
+
+        //    RF_CORE_INFO("GameServerEngine: Attempting to send JoinFailed (Code: %d) to [%s] Reason: %s", reason_code, recipient.ToString().c_str(), reason_message_str.c_str());
+
+        //    packetHandler->SendReliablePacket(
+        //        recipient,
+        //        RF_S2C::S2C_UDP_Payload::S2C_UDP_Payload_S2C_JoinFailedMsg, // Correct FlatBuffer payload type
+        //        builder.Release() // Pass the DetachedBuffer directly
+        //    );
+        //}
 
         void GameServerEngine::ProcessPlayerCommands() {
             std::deque<QueuedPlayerCommand> commandsToProcess;
@@ -448,7 +529,15 @@ namespace RiftForged {
                             auto root_offset = root_builder.Finish();
                             builder.Finish(root_offset);
                             std::vector<uint8_t> payloadBytes(builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
-                            if (m_packetHandlerPtr) m_packetHandlerPtr->SendReliablePacket(endpointOpt.value(), Networking::MessageType::S2C_RiftStepInitiated, payloadBytes); // Assuming generic MessageType
+                            if (m_packetHandlerPtr) {
+                                // This assumes 'builder' is the flatbuffers::FlatBufferBuilder used to create the message
+                                // and that builder.Finish() has already been called for the 'RiftStepInitiated' message.
+                                m_packetHandlerPtr->SendReliablePacket(
+                                    endpointOpt.value(), // The recipient NetworkEndpoint
+                                    RiftForged::Networking::UDP::S2C::S2C_UDP_Payload::S2C_UDP_Payload_RiftStepInitiated, // The new FlatBuffer payload type enum
+                                    builder.Release() // Directly pass the DetachedBuffer, transferring ownership of the serialized data
+                                );
+                            }
                         }
 
                         // C2S Basic Attack
@@ -478,7 +567,14 @@ namespace RiftForged {
                                     std::vector<uint8_t> payloadBytes(builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
                                     // Send to all relevant players, not just the attacker
                                     // For now, sending to attacker for testing. Broadcasting needs a separate mechanism.
-                                    if (m_packetHandlerPtr) m_packetHandlerPtr->SendReliablePacket(endpointOpt.value(), Networking::MessageType::S2C_SpawnProjectile, payloadBytes);
+                                    if (m_packetHandlerPtr) {
+                                        // Corrected call:
+                                        m_packetHandlerPtr->SendReliablePacket(
+                                            endpointOpt.value(),
+                                            RiftForged::Networking::UDP::S2C::S2C_UDP_Payload::S2C_UDP_Payload_SpawnProjectile, // The new FlatBuffer payload type enum
+                                            builder.Release() // Directly pass the DetachedBuffer, which owns the data
+                                        );
+                                    }
                                 }
                                 // Handle outcome.damage_events for melee - construct and send S2C_CombatEventMsg
                                 for (const auto& damage_detail : outcome.damage_events) {
@@ -505,10 +601,10 @@ namespace RiftForged {
                                     builder.Finish(root_offset);
                                     std::vector<uint8_t> payloadBytes(builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
                                     // Send to relevant players (attacker, target, observers)
-                                    if (m_packetHandlerPtr) m_packetHandlerPtr->SendReliablePacket(endpointOpt.value(), Networking::MessageType::S2C_CombatEvent, payloadBytes);
+                                    if (m_packetHandlerPtr) m_packetHandlerPtr->SendReliablePacket(endpointOpt.value(), Networking::UDP::S2C::S2C_UDP_Payload::S2C_UDP_Payload_CombatEvent, builder.Release());
                                     if (damage_detail.target_id != player->playerId) { // Also send to target if different
                                         if (auto targetEndpointOpt = GetEndpointForPlayerId(damage_detail.target_id)) {
-                                            if (m_packetHandlerPtr) m_packetHandlerPtr->SendReliablePacket(targetEndpointOpt.value(), Networking::MessageType::S2C_CombatEvent, payloadBytes);
+                                            if (m_packetHandlerPtr) m_packetHandlerPtr->SendReliablePacket(targetEndpointOpt.value(), Networking::UDP::S2C::S2C_UDP_Payload::S2C_UDP_Payload_CombatEvent, builder.Release());
                                         }
                                     }
                                 }
@@ -642,12 +738,14 @@ namespace RiftForged {
                             std::vector<uint8_t> payloadBytes(builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
 
                             if (m_packetHandlerPtr) { // Check if the pointer is valid
+                                // This assumes 'builder' is the flatbuffers::FlatBufferBuilder used to create the message
+                                // and that builder.Finish() has already been called for the 'S2C_EntityStateUpdate' message.
                                 if (!m_packetHandlerPtr->SendUnreliablePacket( // Use the pointer
                                     playerEndpoint,
-                                    RiftForged::Networking::MessageType::S2C_EntityStateUpdate,
-                                    payloadBytes)) {
-                                    RF_NETWORK_ERROR("GameServerEngine: SendUnreliablePacket failed for S2C_EntityStateUpdate for Player {} to {}",
-                                        player_const->playerId, playerEndpoint.ToString());
+                                    RiftForged::Networking::UDP::S2C::S2C_UDP_Payload::S2C_UDP_Payload_EntityStateUpdate, // The new FlatBuffer payload type enum
+                                    builder.Release())) { // Directly pass the DetachedBuffer, transferring ownership of the serialized data
+                                    RF_NETWORK_ERROR("GameServerEngine: SendUnreliablePacket failed for S2C_EntityStateUpdate for Player %llu to %s",
+                                        player_const->playerId, playerEndpoint.ToString().c_str()); // Updated formatting for logger
                                 }
                             }
                             else {

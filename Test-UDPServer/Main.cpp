@@ -1,5 +1,5 @@
 ﻿// File: Test_Client.cpp
-// (Incorporates reliability protocol and corrected join request/response logic)
+// (Incorporates reliability protocol and FlatBuffers payload_type dispatch)
 
 // Standard C++ Includes
 #include <iostream>
@@ -32,7 +32,8 @@
 #include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h"
 #include "../Utils/MathUtil.h"
 #include "../Utils/Logger.h"
-#include "../NetworkEngine/GamePacketHeader.h"    // Ensure this has C2S_JoinRequest, S2C_JoinSuccess, S2C_JoinFailed
+// GamePacketHeader is still needed for GetGamePacketHeaderSize, struct definition for reliability, flags, and protocol ID
+#include "../NetworkEngine/GamePacketHeader.h"
 #include "../NetworkEngine/UDPReliabilityProtocol.h"
 
 // Constants
@@ -40,9 +41,9 @@ const int CLIENT_RECEIVE_BUFFER_SIZE = 4096;
 const float CLIENT_TURN_INCREMENT_DEGREES = 7.5f;
 
 // Client State
-RiftForged::Networking::Shared::Vec3 g_client_position(0.0f, 0.0f, 1.0f); // Start slightly above ground
+RiftForged::Networking::Shared::Vec3 g_client_position(0.0f, 0.0f, 1.0f);
 RiftForged::Networking::Shared::Quaternion g_client_orientation_quaternion(0.0f, 0.0f, 0.0f, 1.0f);
-uint64_t g_client_player_id = 0; // Will be set by server upon successful join
+uint64_t g_client_player_id = 0;
 std::string g_last_server_event_for_display = "Initializing...";
 RiftForged::Networking::ReliableConnectionState g_clientToServerState;
 
@@ -53,9 +54,12 @@ enum class ClientJoinState {
     FailedToJoin
 };
 ClientJoinState g_join_state = ClientJoinState::Disconnected;
-std::string g_character_id_to_load = "TestChar123"; // Example character ID to load
+std::string g_character_id_to_load = "TestChar123";
 
 // --- C2S Packet Building ---
+// Note: RiftForged::Networking::MessageType is removed from these build functions.
+// PrepareOutgoingPacket will handle the header without a specific MessageType enum from here.
+
 std::vector<char> BuildPingPacket(uint64_t ts) {
     flatbuffers::FlatBufferBuilder builder(128);
     auto fb_payload_offset = RiftForged::Networking::UDP::C2S::CreateC2S_PingMsg(builder, ts);
@@ -66,14 +70,12 @@ std::vector<char> BuildPingPacket(uint64_t ts) {
     auto root_message_offset = root_builder.Finish();
     builder.Finish(root_message_offset);
 
-    RiftForged::Networking::MessageType messageType = RiftForged::Networking::MessageType::C2S_Ping;
     uint8_t packetFlags = static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::IS_RELIABLE);
-
     const uint8_t* fb_data = builder.GetBufferPointer();
     uint16_t fb_size = builder.GetSize();
 
     std::vector<uint8_t> packet_buffer_uint8 = RiftForged::Networking::PrepareOutgoingPacket(
-        g_clientToServerState, messageType, fb_data, fb_size, packetFlags);
+        g_clientToServerState, fb_data, fb_size, packetFlags); // MessageType removed
     return std::vector<char>(packet_buffer_uint8.begin(), packet_buffer_uint8.end());
 }
 
@@ -88,14 +90,12 @@ std::vector<char> BuildMovementInputPacket(const RiftForged::Networking::Shared:
     auto root_message_offset = root_builder.Finish();
     builder.Finish(root_message_offset);
 
-    RiftForged::Networking::MessageType messageType = RiftForged::Networking::MessageType::C2S_MovementInput;
     uint8_t packetFlags = static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::NONE); // Unreliable
-
     const uint8_t* fb_data = builder.GetBufferPointer();
     uint16_t fb_size = builder.GetSize();
 
     std::vector<uint8_t> packet_buffer_uint8 = RiftForged::Networking::PrepareOutgoingPacket(
-        g_clientToServerState, messageType, fb_data, fb_size, packetFlags);
+        g_clientToServerState, fb_data, fb_size, packetFlags); // MessageType removed
     return std::vector<char>(packet_buffer_uint8.begin(), packet_buffer_uint8.end());
 }
 
@@ -108,12 +108,12 @@ std::vector<char> BuildTurnIntentPacket(float turn_delta_degrees) {
     root_builder.add_payload(fb_payload_offset.Union());
     auto root_message_offset = root_builder.Finish();
     builder.Finish(root_message_offset);
-    RiftForged::Networking::MessageType messageType = RiftForged::Networking::MessageType::C2S_TurnIntent;
+
     uint8_t packetFlags = static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::NONE); // Unreliable
     const uint8_t* fb_data = builder.GetBufferPointer();
     uint16_t fb_size = builder.GetSize();
     std::vector<uint8_t> packet_buffer_uint8 = RiftForged::Networking::PrepareOutgoingPacket(
-        g_clientToServerState, messageType, fb_data, fb_size, packetFlags);
+        g_clientToServerState, fb_data, fb_size, packetFlags); // MessageType removed
     return std::vector<char>(packet_buffer_uint8.begin(), packet_buffer_uint8.end());
 }
 
@@ -125,12 +125,12 @@ std::vector<char> BuildRiftStepActivationPacket(uint64_t client_timestamp_ms, Ri
     root_builder.add_payload(fb_payload_offset.Union());
     auto root_message_offset = root_builder.Finish();
     builder.Finish(root_message_offset);
-    RiftForged::Networking::MessageType messageType = RiftForged::Networking::MessageType::C2S_RiftStepActivation;
+
     uint8_t packetFlags = static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::IS_RELIABLE);
     const uint8_t* fb_data = builder.GetBufferPointer();
     uint16_t fb_size = builder.GetSize();
     std::vector<uint8_t> packet_buffer_uint8 = RiftForged::Networking::PrepareOutgoingPacket(
-        g_clientToServerState, messageType, fb_data, fb_size, packetFlags);
+        g_clientToServerState, fb_data, fb_size, packetFlags); // MessageType removed
     return std::vector<char>(packet_buffer_uint8.begin(), packet_buffer_uint8.end());
 }
 
@@ -142,58 +142,40 @@ std::vector<char> BuildBasicAttackIntentPacket(uint64_t client_timestamp_ms, con
     root_builder.add_payload(fb_payload_offset.Union());
     auto root_message_offset = root_builder.Finish();
     builder.Finish(root_message_offset);
-    RiftForged::Networking::MessageType messageType = RiftForged::Networking::MessageType::C2S_BasicAttackIntent;
+
     uint8_t packetFlags = static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::IS_RELIABLE);
     const uint8_t* fb_data = builder.GetBufferPointer();
     uint16_t fb_size = builder.GetSize();
     std::vector<uint8_t> packet_buffer_uint8 = RiftForged::Networking::PrepareOutgoingPacket(
-        g_clientToServerState, messageType, fb_data, fb_size, packetFlags);
+        g_clientToServerState, fb_data, fb_size, packetFlags); // MessageType removed
     return std::vector<char>(packet_buffer_uint8.begin(), packet_buffer_uint8.end());
 }
 
-// <<< CORRECTED Function to build Join Shard Request >>>
 std::vector<char> BuildJoinShardRequestPacket(uint64_t client_timestamp_ms, const std::string& character_id) {
-    flatbuffers::FlatBufferBuilder builder(256); // Adjust size if character_id can be long
-
-    flatbuffers::Offset<void> fb_payload_offset;
-    RiftForged::Networking::UDP::C2S::C2S_UDP_Payload payload_type_enum;
-
-    // --- Corrected Payload for C2S_JoinRequest ---
-    // Use the actual C2S_JoinRequestMsg defined in your FlatBuffers schema
+    flatbuffers::FlatBufferBuilder builder(256);
     auto charIdOffset = character_id.empty() ? 0 : builder.CreateString(character_id);
-
-    // Create the C2S_JoinRequestMsg payload
     auto join_request_payload = RiftForged::Networking::UDP::C2S::CreateC2S_JoinRequestMsg(
-        builder,
-        client_timestamp_ms,
-        charIdOffset
-    );
-
-    fb_payload_offset = join_request_payload.Union();
-    payload_type_enum = RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_JoinRequest; // Correct payload type
-    // --- End of Corrected Payload ---
+        builder, client_timestamp_ms, charIdOffset);
 
     RiftForged::Networking::UDP::C2S::Root_C2S_UDP_MessageBuilder root_builder(builder);
-    root_builder.add_payload_type(payload_type_enum); // Set the correct payload type
-    root_builder.add_payload(fb_payload_offset);      // Add the correct payload
+    root_builder.add_payload_type(RiftForged::Networking::UDP::C2S::C2S_UDP_Payload_JoinRequest);
+    root_builder.add_payload(join_request_payload.Union());
     auto root_message_offset = root_builder.Finish();
     builder.Finish(root_message_offset);
 
-    // Assuming C2S_JoinRequest is the correct MessageType for the join attempt
-    RiftForged::Networking::MessageType messageType = RiftForged::Networking::MessageType::C2S_JoinRequest;
-    uint8_t packetFlags = static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::IS_RELIABLE); // Join should be reliable
-
+    uint8_t packetFlags = static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::IS_RELIABLE);
     const uint8_t* fb_data = builder.GetBufferPointer();
     uint16_t fb_size = builder.GetSize();
 
     std::vector<uint8_t> packet_buffer_uint8 = RiftForged::Networking::PrepareOutgoingPacket(
-        g_clientToServerState, messageType, fb_data, fb_size, packetFlags);
-
+        g_clientToServerState, fb_data, fb_size, packetFlags); // MessageType removed
     return std::vector<char>(packet_buffer_uint8.begin(), packet_buffer_uint8.end());
 }
 
-
 // --- S2C Packet Parsing ---
+// These functions still receive the full S2C FlatBuffer root message as their payload.
+// Their internal logic (verifying root, checking specific payload_type, casting) remains valid.
+
 void ParsePongPacket(const uint8_t* app_payload_ptr, uint16_t app_payload_size) {
     flatbuffers::Verifier verifier(app_payload_ptr, static_cast<size_t>(app_payload_size));
     if (!RiftForged::Networking::UDP::S2C::VerifyRoot_S2C_UDP_MessageBuffer(verifier)) { RF_CORE_ERROR("Client: S2C_PongMsg FlatBuffer verification failed."); g_last_server_event_for_display = "Pong Verification Failed"; return; }
@@ -215,16 +197,11 @@ void ParseEntityStateUpdatePacket(const uint8_t* app_payload_ptr, uint16_t app_p
     if (!update) { RF_CORE_ERROR("Client: Failed to get EntityStateUpdate message from payload."); g_last_server_event_for_display = "ERROR: Failed to get EntityStateUpdate msg."; return; }
     std::ostringstream oss;
     oss << "StateUpdate! ID: " << update->entity_id();
-
-    // This logic might be redundant if S2C_JoinSuccess reliably sets the ID and state.
-    // However, it can serve as a fallback or for subsequent updates.
     if (g_client_player_id == 0 && update->entity_id() != 0 && g_join_state == ClientJoinState::AttemptingJoin) {
         g_client_player_id = update->entity_id();
         oss << " (My PlayerID assigned to " << g_client_player_id << ")";
         RF_CORE_INFO("Client: Player ID assigned to {} via EntityStateUpdate during join attempt.", g_client_player_id);
-        // Transition to Joined state might be better handled by S2C_JoinSuccess explicitly
     }
-
     if (update->entity_id() == g_client_player_id) {
         if (update->position()) { g_client_position = *update->position(); }
         if (update->orientation()) { g_client_orientation_quaternion = *update->orientation(); }
@@ -278,66 +255,86 @@ void ParseCombatEventPacket(const uint8_t* app_payload_ptr, uint16_t app_payload
     RF_CORE_INFO("Client: {}", g_last_server_event_for_display);
 }
 
-
-// <<< CORRECTED Function to parse S2C_JoinSuccess >>>
 void ParseJoinSuccessPacket(const uint8_t* app_payload_ptr, uint16_t app_payload_size) {
+    RF_CORE_INFO("Client: Entered ParseJoinSuccessPacket. Payload size: {}", app_payload_size);
     flatbuffers::Verifier verifier(app_payload_ptr, static_cast<size_t>(app_payload_size));
     if (!RiftForged::Networking::UDP::S2C::VerifyRoot_S2C_UDP_MessageBuffer(verifier)) {
         RF_CORE_ERROR("Client: S2C_JoinSuccessMsg FlatBuffer verification failed.");
         g_last_server_event_for_display = "JoinSuccess Verification Failed";
-        g_join_state = ClientJoinState::FailedToJoin; // Treat verification failure as join failure
+        g_join_state = ClientJoinState::FailedToJoin;
         return;
     }
-    auto root = RiftForged::Networking::UDP::S2C::GetRoot_S2C_UDP_Message(app_payload_ptr);
+    RF_CORE_INFO("Client: S2C_JoinSuccessMsg verification successful.");
 
-    if (!root || root->payload_type() != RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_S2C_JoinSuccessMsg) {
-        RF_CORE_WARN("Client: Received non-JoinSuccess payload when expected (Type: {}), or root is null.", root ? RiftForged::Networking::UDP::S2C::EnumNameS2C_UDP_Payload(root->payload_type()) : "null");
-        g_last_server_event_for_display = "ERROR: Not a JoinSuccess Payload.";
-        g_join_state = ClientJoinState::FailedToJoin; // Treat payload type mismatch as join failure
-        return;
+    auto root = RiftForged::Networking::UDP::S2C::GetRoot_S2C_UDP_Message(app_payload_ptr);
+    if (!root) {
+        RF_CORE_ERROR("Client: GetRoot_S2C_UDP_Message returned null for JoinSuccess.");
+        g_join_state = ClientJoinState::FailedToJoin; return;
     }
+    RF_CORE_INFO("Client: Got Root_S2C_UDP_Message. Expected Payload Type: S2C_JoinSuccessMsg, Actual: {}",
+        RiftForged::Networking::UDP::S2C::EnumNameS2C_UDP_Payload(root->payload_type()));
+
+    if (root->payload_type() != RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_S2C_JoinSuccessMsg) {
+        RF_CORE_WARN("Client: Received non-JoinSuccess payload when expected.");
+        // ... (rest of your existing error handling for this case) ...
+        g_join_state = ClientJoinState::FailedToJoin; return;
+    }
+    RF_CORE_INFO("Client: Payload type is S2C_JoinSuccessMsg.");
 
     auto join_success_msg = root->payload_as_S2C_JoinSuccessMsg();
     if (!join_success_msg) {
-        RF_CORE_ERROR("Client: Failed to get JoinSuccess message from payload.");
-        g_last_server_event_for_display = "ERROR: Failed to get JoinSuccess msg.";
-        g_join_state = ClientJoinState::FailedToJoin; // Treat missing payload as join failure
+        RF_CORE_ERROR("Client: Failed to get JoinSuccess message from payload (payload_as_S2C_JoinSuccessMsg returned null).");
+        g_last_server_event_for_display = "ERROR: Failed to cast to JoinSuccess msg.";
+        g_join_state = ClientJoinState::FailedToJoin;
         return;
     }
+    RF_CORE_INFO("Client: Successfully cast to S2C_JoinSuccessMsg.");
 
+    // Log before accessing each field
+    RF_CORE_INFO("Client: Accessing assigned_player_id...");
     g_client_player_id = join_success_msg->assigned_player_id();
+    RF_CORE_INFO("Client: Assigned Player ID: {}", g_client_player_id);
+
     g_join_state = ClientJoinState::Joined;
 
     std::string welcome_msg_str = "Welcome!";
+    RF_CORE_INFO("Client: Accessing welcome_message (optional)...");
     if (join_success_msg->welcome_message()) {
-        welcome_msg_str = join_success_msg->welcome_message()->str();
+        RF_CORE_INFO("Client: welcome_message exists. Accessing str()...");
+        welcome_msg_str = join_success_msg->welcome_message()->str(); // Potential crash if welcome_message() is non-null but invalid
+        RF_CORE_INFO("Client: Welcome message: {}", welcome_msg_str);
     }
+    else {
+        RF_CORE_INFO("Client: No welcome_message present.");
+    }
+
+    RF_CORE_INFO("Client: Accessing server_tick_rate_hz...");
+    uint16_t tick_rate = join_success_msg->server_tick_rate_hz();
+    RF_CORE_INFO("Client: Server tick rate: {}", tick_rate);
+
     g_last_server_event_for_display = "JOIN SUCCESSFUL! Player ID: " + std::to_string(g_client_player_id) +
         " Msg: " + welcome_msg_str +
-        " TickRate: " + std::to_string(join_success_msg->server_tick_rate_hz()) + "Hz";
-    RF_CORE_INFO("Client: {}", g_last_server_event_for_display);
+        " TickRate: " + std::to_string(tick_rate) + "Hz";
+    RF_CORE_INFO("Client: ParseJoinSuccessPacket completed: {}", g_last_server_event_for_display);
+    RF_CORE_CRITICAL("Client: ParseJoinSuccessPacket FULLY COMPLETED. Player ID: {}, Join State: {}", g_client_player_id, static_cast<int>(g_join_state));
+
 }
 
-// <<< CORRECTED Function to parse S2C_JoinFailed >>>
 void ParseJoinFailedPacket(const uint8_t* app_payload_ptr, uint16_t app_payload_size) {
-    g_join_state = ClientJoinState::FailedToJoin; // Set state immediately
-
+    g_join_state = ClientJoinState::FailedToJoin;
     flatbuffers::Verifier verifier(app_payload_ptr, static_cast<size_t>(app_payload_size));
     if (!RiftForged::Networking::UDP::S2C::VerifyRoot_S2C_UDP_MessageBuffer(verifier)) {
         RF_CORE_ERROR("Client: S2C_JoinFailedMsg FlatBuffer verification failed.");
         g_last_server_event_for_display = "JoinFailed Verification Failed"; return;
     }
     auto root = RiftForged::Networking::UDP::S2C::GetRoot_S2C_UDP_Message(app_payload_ptr);
-
     if (!root || root->payload_type() != RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_S2C_JoinFailedMsg) {
         RF_CORE_WARN("Client: Received non-JoinFailed payload when expected (Type: {}), or root is null.", root ? RiftForged::Networking::UDP::S2C::EnumNameS2C_UDP_Payload(root->payload_type()) : "null");
         g_last_server_event_for_display = "ERROR: Not a JoinFailed Payload."; return;
     }
-
     auto join_failed_msg = root->payload_as_S2C_JoinFailedMsg();
     std::string reason = "Unknown reason";
     int16_t reason_code = 0;
-
     if (join_failed_msg) {
         if (join_failed_msg->reason_message()) {
             reason = join_failed_msg->reason_message()->str();
@@ -351,14 +348,13 @@ void ParseJoinFailedPacket(const uint8_t* app_payload_ptr, uint16_t app_payload_
     RF_CORE_ERROR("Client: {}", g_last_server_event_for_display);
 }
 
-
 void DisplayClientState() {
 #ifdef _WIN32
     system("cls");
 #else
     printf("\033[H\033[J");
 #endif
-    std::cout << "RiftForged Test Client (Reliability Enabled)" << std::endl;
+    std::cout << "RiftForged Test Client (Reliability Enabled, FB Payload Dispatch)" << std::endl;
     std::cout << "Controls: J (Join), WASD (move), QE (turn), SPACE (RiftStep), F (Attack), P (Ping), 0 (quit)" << std::endl;
     std::cout << "-----------------------------------------------------------------------" << std::endl;
     RiftForged::Networking::Shared::Vec3 display_fwd = RiftForged::Utilities::Math::GetWorldForwardVector(g_client_orientation_quaternion);
@@ -385,10 +381,9 @@ RiftForged::Networking::UDP::C2S::RiftStepDirectionalIntent GetRiftStepIntentFro
     return RiftForged::Networking::UDP::C2S::RiftStepDirectionalIntent_Default_Backward;
 }
 
-
 int main() {
     RiftForged::Utilities::Logger::Init(spdlog::level::trace, spdlog::level::trace, "logs/test_client_final.log");
-    RF_CORE_INFO("RiftForged Test Client (Join + Bind) Starting (Protocol v{:#0X})...", RiftForged::Networking::CURRENT_PROTOCOL_ID_VERSION);
+    RF_CORE_INFO("RiftForged Test Client Starting (Protocol v{:#0X})...", RiftForged::Networking::CURRENT_PROTOCOL_ID_VERSION);
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -426,8 +421,8 @@ int main() {
 
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(12345);
-    const char* serverIp = "127.0.0.1"; // Changed to localhost for easier local testing; revert if needed
+    serverAddr.sin_port = htons(12345); // Default server port
+    const char* serverIp = "127.0.0.1"; // Changed to localhost for easier local testing
     if (inet_pton(AF_INET, serverIp, &serverAddr.sin_addr) != 1) {
         RF_CORE_CRITICAL("Client: inet_pton failed for IP {}: {}", serverIp, WSAGetLastError());
         closesocket(clientSocket);
@@ -436,7 +431,7 @@ int main() {
     }
     RF_CORE_INFO("Client: Server address configured for {}:{}", serverIp, ntohs(serverAddr.sin_port));
 
-    DWORD client_socket_timeout_ms = 10;
+    DWORD client_socket_timeout_ms = 10; // Non-blocking receive
     if (setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&client_socket_timeout_ms, sizeof(client_socket_timeout_ms)) == SOCKET_ERROR) {
         RF_CORE_WARN("Client: setsockopt for SO_RCVTIMEO failed: {}. recvfrom will block if no data.", WSAGetLastError());
     }
@@ -473,7 +468,6 @@ int main() {
                     RF_CORE_INFO("Client: Action - Join (State: {}). No new request sent.", static_cast<int>(g_join_state));
                 }
                 break;
-
             case 'W': if (g_join_state == ClientJoinState::Joined) { local_move_intent = { 0.0f, 1.0f, 0.0f }; packet_to_send = BuildMovementInputPacket(local_move_intent, GetAsyncKeyState(VK_SHIFT) & 0x8000); wants_to_send_action_this_loop = true; } break;
             case 'S': if (g_join_state == ClientJoinState::Joined) { local_move_intent = { 0.0f, -1.0f,0.0f }; packet_to_send = BuildMovementInputPacket(local_move_intent, GetAsyncKeyState(VK_SHIFT) & 0x8000); wants_to_send_action_this_loop = true; } break;
             case 'A': if (g_join_state == ClientJoinState::Joined) { local_move_intent = { -1.0f, 0.0f,0.0f }; packet_to_send = BuildMovementInputPacket(local_move_intent, GetAsyncKeyState(VK_SHIFT) & 0x8000); wants_to_send_action_this_loop = true; } break;
@@ -491,7 +485,7 @@ int main() {
             case 'F': if (g_join_state == ClientJoinState::Joined) {
                 uint64_t ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 RiftForged::Networking::Shared::Vec3 world_aim_dir = RiftForged::Utilities::Math::GetWorldForwardVector(g_client_orientation_quaternion);
-                packet_to_send = BuildBasicAttackIntentPacket(ts, world_aim_dir, 0);
+                packet_to_send = BuildBasicAttackIntentPacket(ts, world_aim_dir, 0); // Target ID 0 for now
                 wants_to_send_action_this_loop = true;
                 RF_CORE_DEBUG("Client: Action - Basic Attack Intent.");
                 break;
@@ -535,8 +529,10 @@ int main() {
             if (packet_to_send.size() >= RiftForged::Networking::GetGamePacketHeaderSize()) {
                 RiftForged::Networking::GamePacketHeader sent_hdr_preview;
                 memcpy(&sent_hdr_preview, packet_to_send.data(), RiftForged::Networking::GetGamePacketHeaderSize());
-                RF_CORE_DEBUG("Client: Sending packet. Type: {}, Seq: {}, AckNum: {}, AckBits: 0x{:X}, Flags: 0x{:X}",
-                    RiftForged::Networking::EnumNameMessageType(sent_hdr_preview.messageType),
+                // The sent_hdr_preview.messageType would show a generic type or be 0 if removed from header.
+                // To log specific type, you'd need to inspect the FlatBuffer before wrapping it with reliability header.
+                // For now, we'll keep the old log which might show a generic MessageType.
+                RF_CORE_DEBUG("Client: Sending packet. Seq: {}, AckNum: {}, AckBits: 0x{:X}, Flags: 0x{:X}",
                     sent_hdr_preview.sequenceNumber, sent_hdr_preview.ackNumber,
                     sent_hdr_preview.ackBitfield, sent_hdr_preview.flags);
             }
@@ -565,44 +561,62 @@ int main() {
                     g_clientToServerState, s2c_header, s2c_full_payload_ptr, s2c_full_payload_len,
                     &app_payload_to_process_ptr, &app_payload_size);
 
-                if (should_process_app_payload && app_payload_to_process_ptr) {
-                    state_changed_by_receive_this_loop = true;
-                    RF_CORE_DEBUG("Client: Reliability approved S2C payload. Type: {}, AppPayloadSize: {}",
-                        RiftForged::Networking::EnumNameMessageType(s2c_header.messageType), app_payload_size);
-                    switch (s2c_header.messageType) {
-                    case RiftForged::Networking::MessageType::S2C_JoinSuccess:
-                        ParseJoinSuccessPacket(app_payload_to_process_ptr, app_payload_size);
-                        break;
-                    case RiftForged::Networking::MessageType::S2C_JoinFailed:
-                        ParseJoinFailedPacket(app_payload_to_process_ptr, app_payload_size);
-                        // running = false; // Optional: Quit on join failure, you might want to allow retry
-                        break;
-                    case RiftForged::Networking::MessageType::S2C_Pong:
-                        ParsePongPacket(app_payload_to_process_ptr, app_payload_size);
-                        break;
-                    case RiftForged::Networking::MessageType::S2C_EntityStateUpdate:
-                        ParseEntityStateUpdatePacket(app_payload_to_process_ptr, app_payload_size);
-                        if (g_client_player_id != 0 && g_join_state == ClientJoinState::AttemptingJoin) {
-                            // This explicit check might be overly cautious if S2C_JoinSuccess is robust
-                            // g_join_state = ClientJoinState::Joined; 
-                            // RF_CORE_INFO("Client: Received EntityStateUpdate for self (ID: {}), considering fully JOINED (fallback).", g_client_player_id);
+                if (should_process_app_payload && app_payload_to_process_ptr && app_payload_size > 0) {
+                    flatbuffers::Verifier verifier(app_payload_to_process_ptr, static_cast<size_t>(app_payload_size));
+                    if (!RiftForged::Networking::UDP::S2C::VerifyRoot_S2C_UDP_MessageBuffer(verifier)) {
+                        RF_CORE_ERROR("Client: S2C Root FlatBuffer verification failed. Size: {}", app_payload_size);
+                        g_last_server_event_for_display = "S2C Root Verification Failed";
+                        state_changed_by_receive_this_loop = true;
+                    }
+                    else {
+                        auto root_s2c_message = RiftForged::Networking::UDP::S2C::GetRoot_S2C_UDP_Message(app_payload_to_process_ptr);
+                        if (root_s2c_message && root_s2c_message->payload_type() != RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_NONE) {
+                            RF_CORE_DEBUG("Client: Reliability approved S2C FB payload. FB_Type: {}, AppPayloadSize: {}",
+                                RiftForged::Networking::UDP::S2C::EnumNameS2C_UDP_Payload(root_s2c_message->payload_type()), app_payload_size);
+                            state_changed_by_receive_this_loop = true; // Assume any valid message might change display state
+                            switch (root_s2c_message->payload_type()) {
+                            case RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_S2C_JoinSuccessMsg:
+                                ParseJoinSuccessPacket(app_payload_to_process_ptr, app_payload_size);
+                                break;
+                            case RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_S2C_JoinFailedMsg:
+                                ParseJoinFailedPacket(app_payload_to_process_ptr, app_payload_size);
+                                break;
+                            case RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_Pong:
+                                ParsePongPacket(app_payload_to_process_ptr, app_payload_size);
+                                break;
+                            case RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_EntityStateUpdate:
+                                ParseEntityStateUpdatePacket(app_payload_to_process_ptr, app_payload_size);
+                                break;
+                            case RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_RiftStepInitiated:
+                                ParseRiftStepInitiatedPacket(app_payload_to_process_ptr, app_payload_size);
+                                break;
+                            case RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_CombatEvent:
+                                ParseCombatEventPacket(app_payload_to_process_ptr, app_payload_size);
+                                break;
+                                // Add cases for S2C_SpawnProjectileMsg etc. if they are defined
+                            default:
+                                g_last_server_event_for_display = "S2C Unhandled FB Payload (Type: " +
+                                    std::string(RiftForged::Networking::UDP::S2C::EnumNameS2C_UDP_Payload(root_s2c_message->payload_type())) + ")";
+                                RF_CORE_WARN("Client: {}", g_last_server_event_for_display);
+                                state_changed_by_receive_this_loop = false; // Or true to show "unhandled"
+                                break;
+                            }
                         }
-                        break;
-                    case RiftForged::Networking::MessageType::S2C_RiftStepInitiated:
-                        ParseRiftStepInitiatedPacket(app_payload_to_process_ptr, app_payload_size);
-                        break;
-                    case RiftForged::Networking::MessageType::S2C_CombatEvent:
-                        ParseCombatEventPacket(app_payload_to_process_ptr, app_payload_size);
-                        break;
-                    default:
-                        g_last_server_event_for_display = "S2C Unhandled (Type: " + std::string(RiftForged::Networking::EnumNameMessageType(s2c_header.messageType)) + ")";
-                        RF_CORE_WARN("Client: {}", g_last_server_event_for_display);
-                        state_changed_by_receive_this_loop = false;
-                        break;
+                        else if (root_s2c_message && root_s2c_message->payload_type() == RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_NONE) {
+                            RF_CORE_TRACE("Client: Received S2C Root message with explicit NONE payload. Likely an ACK with no app data. Seq: {}", s2c_header.sequenceNumber);
+                            // No specific app payload to process, but reliability layer handled it.
+                        }
+                        else {
+                            RF_CORE_ERROR("Client: Failed to get Root_S2C_UDP_Message from payload, or payload_type is NONE incorrectly. AppPayloadSize: {}", app_payload_size);
+                            g_last_server_event_for_display = "ERROR: S2C Root Message Null or Invalid Payload_NONE";
+                            state_changed_by_receive_this_loop = true;
+                        }
                     }
                 }
-                else if (RiftForged::Networking::HasFlag(s2c_header.flags, RiftForged::Networking::GamePacketFlag::IS_ACK_ONLY) || RiftForged::Networking::HasFlag(s2c_header.flags, RiftForged::Networking::GamePacketFlag::IS_RELIABLE)) {
-                    RF_CORE_TRACE("Client: S2C Reliability packet processed (Seq {}). No app payload or duplicate/old.", s2c_header.sequenceNumber);
+                else if (RiftForged::Networking::HasFlag(s2c_header.flags, RiftForged::Networking::GamePacketFlag::IS_ACK_ONLY) ||
+                    (RiftForged::Networking::HasFlag(s2c_header.flags, RiftForged::Networking::GamePacketFlag::IS_RELIABLE) && !should_process_app_payload)) {
+                    // This case handles ACK-only packets or reliable packets that were duplicates/out of order and thus have no app payload to process further by this layer.
+                    RF_CORE_TRACE("Client: S2C Reliability packet processed (Seq {}). No app payload for client logic or it was a pure ACK.", s2c_header.sequenceNumber);
                 }
             }
             else {
@@ -632,11 +646,12 @@ int main() {
             auto timeSinceLastClientSend = std::chrono::duration_cast<std::chrono::milliseconds>(
                 currentTimeForAck - g_clientToServerState.lastPacketSentTimeToRemote);
 
+            // Send ACK if no action packet sent for a bit, or if it's the very first ACK needed
             if (g_clientToServerState.lastPacketSentTimeToRemote == std::chrono::steady_clock::time_point::min() ||
-                timeSinceLastClientSend.count() > 50) {
+                timeSinceLastClientSend.count() > 50) { // Send ACK if no packet sent for 50ms
                 RF_CORE_DEBUG("Client: Pending ACK to server. Sending ACK-only packet.");
                 std::vector<uint8_t> ack_packet_uint8 = RiftForged::Networking::PrepareOutgoingPacket(
-                    g_clientToServerState, RiftForged::Networking::MessageType::Unknown, nullptr, 0,
+                    g_clientToServerState, nullptr, 0, // No FB payload for ACK-only
                     static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::IS_RELIABLE) | static_cast<uint8_t>(RiftForged::Networking::GamePacketFlag::IS_ACK_ONLY));
 
                 if (!ack_packet_uint8.empty()) {
@@ -663,7 +678,7 @@ int main() {
 
     std::cout << "\nClient application shut down. Log file: logs/test_client_final.log" << std::endl;
     std::cout << "Press any key to exit console." << std::endl;
-    while (_kbhit()) { _getch(); }
-    _getch();
+    while (_kbhit()) { _getch(); } // Clear buffer
+    _getch(); // Wait for final key press
     return 0;
 }

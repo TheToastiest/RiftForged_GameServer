@@ -5,19 +5,26 @@
 //          and bridges the Network IO layer to the application-level MessageHandler.
 
 #include "UDPPacketHandler.h"
-#include "INetworkIO.h"       // For calling m_networkIO->SendData()
-#include "IMessageHandler.h"  // For calling m_messageHandler->ProcessApplicationMessage()
-#include "OverlappedIOContext.h" // For the type passed in OnRawDataReceived, OnSendCompleted
-#include "NetworkCommon.h"      // For S2C_Response structure
+#include "INetworkIO.h"            // For calling m_networkIO->SendData()
+#include "IMessageHandler.h"       // For calling m_messageHandler->ProcessApplicationMessage()
+#include "OverlappedIOContext.h"   // For the type passed in OnRawDataReceived, OnSendCompleted
+#include "NetworkCommon.h"         // For S2C_Response structure (now using FB S2C payload type)
 #include "UDPReliabilityProtocol.h" // For the free functions and ReliableConnectionState, GamePacketFlag
-#include "../Gameplay/PlayerManager.h" // Included from UDPPacketHandler.h
-#include "../Utils/Logger.h"    // Assuming your logger utility
-#include "../GameServer/GameServerEngine.h"
 
-#include <utility> // For std::move
-#include <algorithm> // For std::remove_if, std::find_if
+// Include FlatBuffers generated headers to access payload enums and verify functions
+#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h" // For C2S_UDP_Payload
+#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // For S2C_UDP_Payload
+
+#include "../GameServer/GameServerEngine.h" // For m_gameServerEngine.OnClientDisconnected and GetAllActiveSessionEndpoints
+#include "../Gameplay/ActivePlayer.h"       // For RiftForged::GameLogic::ActivePlayer
+#include "../Utils/Logger.h"        // Assuming your logger utility
+
+#include <utility>      // For std::move
+#include <algorithm>    // For std::remove_if, std::find_if
+#include <stdexcept>    // For std::invalid_argument
 
 // Constants are defined in UDPPacketHandler.h or UDPReliabilityProtocol.h
+
 
 namespace RiftForged {
     namespace Networking {
@@ -26,8 +33,7 @@ namespace RiftForged {
 
         UDPPacketHandler::UDPPacketHandler(INetworkIO* networkIO,
             IMessageHandler* messageHandler,
-            RiftForged::Server::GameServerEngine& gameServerEngine
-            )
+            RiftForged::Server::GameServerEngine& gameServerEngine)
             : m_networkIO(networkIO),
             m_messageHandler(messageHandler),
             m_gameServerEngine(gameServerEngine),
@@ -51,12 +57,12 @@ namespace RiftForged {
         // --- Public Control Methods ---
 
         bool UDPPacketHandler::Start() {
-            if (m_isRunning.load(std::memory_order_acquire)) { // Acquire for visibility
+            if (m_isRunning.load(std::memory_order_acquire)) {
                 RF_NETWORK_WARN("UDPPacketHandler: Already running.");
                 return true;
             }
             RF_NETWORK_INFO("UDPPacketHandler: Starting...");
-            m_isRunning.store(true, std::memory_order_release); // Release for visibility
+            m_isRunning.store(true, std::memory_order_release);
 
             try {
                 m_reliabilityThread = std::thread(&UDPPacketHandler::ReliabilityManagementThread, this);
@@ -80,6 +86,14 @@ namespace RiftForged {
                 m_reliabilityThread.join();
                 RF_NETWORK_INFO("UDPPacketHandler: Reliability management thread joined.");
             }
+
+            // Clean up reliability states upon stop
+            {
+                std::lock_guard<std::mutex> lock(m_reliabilityStatesMutex);
+                m_reliabilityStates.clear();
+                m_endpointLastSeenTime.clear();
+            }
+            RF_NETWORK_INFO("UDPPacketHandler: Reliability states and last seen times cleared.");
             RF_NETWORK_INFO("UDPPacketHandler: Stopped.");
         }
 
@@ -90,31 +104,29 @@ namespace RiftForged {
             uint32_t size,
             OverlappedIOContext* context) {
             // 'context' is from UDPSocketAsync's pool, we don't manage its lifecycle here.
-            RF_NETWORK_TRACE("UDPPacketHandler: OnRawDataReceived from {}:{} ({} bytes)", sender.ipAddress, sender.port, size);
+            RF_NETWORK_TRACE("UDPPacketHandler: OnRawDataReceived from %s ({} bytes)", sender.ToString(), size);
 
             if (!m_isRunning.load(std::memory_order_acquire)) {
-                RF_NETWORK_WARN("UDPPacketHandler: Received data but handler is not running. Ignoring from {}.", sender.ToString());
+                RF_NETWORK_WARN("UDPPacketHandler: Received data but handler is not running. Ignoring from %s.", sender.ToString());
                 return;
             }
 
             if (size < GetGamePacketHeaderSize()) {
-                RF_NETWORK_WARN("UDPPacketHandler: Received packet too small ({} bytes) from {}. Discarding.", size, sender.ToString());
+                RF_NETWORK_WARN("UDPPacketHandler: Received packet too small ({} bytes) from %s. Discarding.", size, sender.ToString());
                 return;
             }
 
             GamePacketHeader receivedHeader;
             // It's crucial that GamePacketHeader is packed correctly for this memcpy.
-            // Your #pragma pack(push, 1) in GamePacketHeader.h handles this.
             memcpy(&receivedHeader, data, GetGamePacketHeaderSize());
 
-            RF_NETWORK_TRACE("UDPPacketHandler: Raw Header from {} - Proto: 0x{:X}, Type: {}, Seq: {}, Ack: {}, AckBits: 0x{:X}, Flags: 0x{:X}",
+            RF_NETWORK_TRACE("UDPPacketHandler: Raw Header from %s - Proto: 0x%X, Seq: %u, Ack: %u, AckBits: 0x%08X, Flags: 0x%X",
                 sender.ToString(), receivedHeader.protocolId,
-                EnumNameMessageType(receivedHeader.messageType),
                 receivedHeader.sequenceNumber,
                 receivedHeader.ackNumber, receivedHeader.ackBitfield, receivedHeader.flags);
 
             if (receivedHeader.protocolId != CURRENT_PROTOCOL_ID_VERSION) {
-                RF_NETWORK_WARN("UDPPacketHandler: Received packet from {} with mismatched protocol ID (Expected: 0x{:X}, Got: 0x{:X}). Discarding.",
+                RF_NETWORK_WARN("UDPPacketHandler: Received packet from %s with mismatched protocol ID (Expected: 0x%X, Got: 0x%X). Discarding.",
                     sender.ToString(), CURRENT_PROTOCOL_ID_VERSION, receivedHeader.protocolId);
                 return;
             }
@@ -127,10 +139,9 @@ namespace RiftForged {
 
             std::shared_ptr<ReliableConnectionState> connState = GetOrCreateReliabilityState(sender);
             if (!connState) {
-                RF_NETWORK_ERROR("UDPPacketHandler: Failed to get/create reliability state for {}. Discarding packet.", sender.ToString());
+                RF_NETWORK_ERROR("UDPPacketHandler: Failed to get/create reliability state for %s. Discarding packet.", sender.ToString());
                 return;
             }
-            // No explicit lock on connState->internalStateMutex here, as the free functions will handle it.
 
             const uint8_t* payloadAfterGameHeader = data + GetGamePacketHeaderSize();
             uint16_t payloadAfterGameHeaderSize = static_cast<uint16_t>(size - GetGamePacketHeaderSize());
@@ -138,40 +149,48 @@ namespace RiftForged {
             const uint8_t* appPayloadToProcess = nullptr;
             uint16_t appPayloadSize = 0;
 
-            // Call the free function from UDPReliabilityProtocol.cpp
+            // Call the free function from UDPReliabilityProtocol.cpp to process reliability aspects.
+            // This function now determines if the packet's payload should be passed to the application layer.
             bool shouldRelayToGameLogic = RiftForged::Networking::ProcessIncomingPacketHeader(
-                *connState, // Pass the ReliableConnectionState object
+                *connState,
                 receivedHeader,
                 payloadAfterGameHeader,
                 payloadAfterGameHeaderSize,
-                &appPayloadToProcess, // Output parameter for start of FlatBuffer
-                &appPayloadSize       // Output parameter for size of FlatBuffer
+                &appPayloadToProcess,
+                &appPayloadSize
             );
 
             if (shouldRelayToGameLogic) {
+                // Check if a FlatBuffer payload is actually present and valid for processing.
                 if (appPayloadToProcess && appPayloadSize > 0) {
-                    RF_NETWORK_TRACE("UDPPacketHandler: Relaying app payload (Type: {}) from {} to MessageHandler. Size: {}",
-                        EnumNameMessageType(receivedHeader.messageType), sender.ToString(), appPayloadSize);
+                    RF_NETWORK_TRACE("UDPPacketHandler: Relaying app payload from %s to MessageHandler. Size: %u bytes.",
+                        sender.ToString(), appPayloadSize);
 
+                    // --- IMPORTANT: Get the ActivePlayer associated with this sender endpoint ---
+                    // This is the main addition to this function.
+                    RiftForged::GameLogic::ActivePlayer* player = nullptr; // Initialize to nullptr
+
+                    // Pass FlatBuffer payload directly to the message handler
                     std::optional<S2C_Response> s2c_response_opt = m_messageHandler->ProcessApplicationMessage(
                         sender,
-                        receivedHeader.messageType,
                         appPayloadToProcess,
-                        appPayloadSize
+                        appPayloadSize,
+                        player // Pass the retrieved ActivePlayer pointer
                     );
 
                     if (s2c_response_opt.has_value()) {
-                        HandleResponseMessage(s2c_response_opt, sender);
+                        HandleResponseMessage(s2c_response_opt);
                     }
                 }
-                else if (receivedHeader.messageType != MessageType::Unknown && !HasFlag(receivedHeader.flags, GamePacketFlag::IS_ACK_ONLY)) {
-                    RF_NETWORK_WARN("UDPPacketHandler: Packet from {} (Type: {}) expected app payload for MessageHandler but was empty. AppSize: {}. Flags: {}",
-                        sender.ToString(), EnumNameMessageType(receivedHeader.messageType), appPayloadSize, receivedHeader.flags);
+                else {
+                    // This case should ideally not happen if ProcessIncomingPacketHeader is perfectly aligned,
+                    // as it should only return true if there's a valid app payload.
+                    RF_NETWORK_WARN("UDPPacketHandler: ProcessIncomingPacketHeader returned true, but no app payload was provided. This might indicate an issue.");
                 }
             }
             else {
-                RF_NETWORK_TRACE("UDPPacketHandler: Packet from {} (Type: {}) not relayed (e.g., duplicate/pure ACK handled by reliability).",
-                    sender.ToString(), EnumNameMessageType(receivedHeader.messageType));
+                RF_NETWORK_TRACE("UDPPacketHandler: Packet from %s not relayed (e.g., duplicate, pure ACK, or invalid for application processing).",
+                    sender.ToString());
             }
         }
 
@@ -189,159 +208,144 @@ namespace RiftForged {
         }
 
         void UDPPacketHandler::OnNetworkError(const std::string& errorMessage, int errorCode) {
-            RF_NETWORK_ERROR("UDPPacketHandler: Received OnNetworkError from NetworkIO: \"{}\" (Code: {})", errorMessage, errorCode);
+            RF_NETWORK_ERROR("UDPPacketHandler: Received OnNetworkError from NetworkIO: \"%s\" (Code: %d)", errorMessage.c_str(), errorCode);
         }
 
 
         // --- Public Sending Interface ---
 
         bool UDPPacketHandler::SendReliablePacket(const NetworkEndpoint& recipient,
-            MessageType messageId,
-            const std::vector<uint8_t>& flatbufferPayload,
+            UDP::S2C::S2C_UDP_Payload flatbufferPayloadType,
+            const flatbuffers::DetachedBuffer& flatbufferPayload,
             uint8_t additionalFlags) {
             if (!m_isRunning.load(std::memory_order_acquire)) {
-                RF_NETWORK_WARN("UDPPacketHandler: SendReliablePacket called but handler is not running. Dropping packet to {}.", recipient.ToString());
+                RF_NETWORK_WARN("UDPPacketHandler: SendReliablePacket called but handler is not running. Dropping packet to %s.", recipient.ToString());
                 return false;
             }
 
             std::shared_ptr<ReliableConnectionState> connState = GetOrCreateReliabilityState(recipient);
             if (!connState) {
-                RF_NETWORK_ERROR("UDPPacketHandler: SendReliablePacket - Failed to get/create reliability state for {}. Dropping packet.", recipient.ToString());
+                RF_NETWORK_ERROR("UDPPacketHandler: SendReliablePacket - Failed to get/create reliability state for %s. Dropping packet.", recipient.ToString());
                 return false;
             }
-            // No explicit lock on connState->internalStateMutex here, PrepareOutgoingPacket will handle it.
 
             uint8_t flags = static_cast<uint8_t>(GamePacketFlag::IS_RELIABLE) | additionalFlags;
 
-            // Call the free function from UDPReliabilityProtocol.cpp
             std::vector<uint8_t> packetBuffer = RiftForged::Networking::PrepareOutgoingPacket(
-                *connState, // Pass the ReliableConnectionState object
-                messageId,
+                *connState,
                 flatbufferPayload.data(),
                 static_cast<uint16_t>(flatbufferPayload.size()),
                 flags
             );
 
             if (packetBuffer.empty()) {
-                RF_NETWORK_ERROR("UDPPacketHandler: SendReliablePacket - PrepareOutgoingPacket returned empty for MsgType {} to {}.",
-                    EnumNameMessageType(messageId), recipient.ToString());
+                RF_NETWORK_ERROR("UDPPacketHandler: SendReliablePacket - PrepareOutgoingPacket returned empty for FB type %s to %s.",
+                    UDP::S2C::EnumNameS2C_UDP_Payload(flatbufferPayloadType), recipient.ToString());
                 return false;
             }
 
-            // The sequence number is already part of the header constructed by PrepareOutgoingPacket
-            // We can log it if needed by peeking into the buffer, but connState->nextOutgoingSequenceNumber was already incremented.
-            // To get the actual sequence used, you'd deserialize the header from packetBuffer or have PrepareOutgoingPacket return it.
-            // For simplicity, logging before sending:
-            RF_NETWORK_TRACE("UDPPacketHandler: Sending RELIABLE MsgType {} ({} bytes total) to {}.",
-                EnumNameMessageType(messageId), packetBuffer.size(), recipient.ToString());
+            RF_NETWORK_TRACE("UDPPacketHandler: Sending RELIABLE FB Type %s (%u bytes total) to %s.",
+                UDP::S2C::EnumNameS2C_UDP_Payload(flatbufferPayloadType), packetBuffer.size(), recipient.ToString());
 
             return m_networkIO->SendData(recipient, packetBuffer.data(), static_cast<uint32_t>(packetBuffer.size()));
         }
 
         bool UDPPacketHandler::SendUnreliablePacket(const NetworkEndpoint& recipient,
-            MessageType messageId,
-            const std::vector<uint8_t>& flatbufferPayload,
+            UDP::S2C::S2C_UDP_Payload flatbufferPayloadType,
+            const flatbuffers::DetachedBuffer& flatbufferPayload,
             uint8_t additionalFlags) {
             if (!m_isRunning.load(std::memory_order_acquire)) {
-                RF_NETWORK_WARN("UDPPacketHandler: SendUnreliablePacket called but handler is not running. Dropping packet to {}.", recipient.ToString());
+                RF_NETWORK_WARN("UDPPacketHandler: SendUnreliablePacket called but handler is not running. Dropping packet to %s.", recipient.ToString());
                 return false;
             }
 
             std::shared_ptr<ReliableConnectionState> connState = GetOrCreateReliabilityState(recipient);
             if (!connState) {
-                RF_NETWORK_ERROR("UDPPacketHandler: SendUnreliablePacket - Failed to get/create reliability state for {}. Dropping packet (needed for ACK info).", recipient.ToString());
+                RF_NETWORK_ERROR("UDPPacketHandler: SendUnreliablePacket - Failed to get/create reliability state for %s. Dropping packet (needed for ACK info).", recipient.ToString());
                 return false;
             }
-            // No explicit lock on connState->internalStateMutex here, PrepareOutgoingPacket will handle it.
 
             uint8_t flags = additionalFlags & (~static_cast<uint8_t>(GamePacketFlag::IS_RELIABLE)); // Ensure not marked reliable
 
-            // Call the free function from UDPReliabilityProtocol.cpp
             std::vector<uint8_t> packetBuffer = RiftForged::Networking::PrepareOutgoingPacket(
-                *connState, // Pass state to include its latest ack info
-                messageId,
+                *connState,
                 flatbufferPayload.data(),
                 static_cast<uint16_t>(flatbufferPayload.size()),
                 flags
             );
 
             if (packetBuffer.empty()) {
-                RF_NETWORK_ERROR("UDPPacketHandler: SendUnreliablePacket - PrepareOutgoingPacket returned empty for MsgType {} to {}.",
-                    EnumNameMessageType(messageId), recipient.ToString());
+                RF_NETWORK_ERROR("UDPPacketHandler: SendUnreliablePacket - PrepareOutgoingPacket returned empty for FB Type %s to %s.",
+                    UDP::S2C::EnumNameS2C_UDP_Payload(flatbufferPayloadType), recipient.ToString());
                 return false;
             }
 
-            RF_NETWORK_TRACE("UDPPacketHandler: Sending UNRELIABLE MsgType {} ({} bytes total) to {}",
-                EnumNameMessageType(messageId), packetBuffer.size(), recipient.ToString());
+            RF_NETWORK_TRACE("UDPPacketHandler: Sending UNRELIABLE FB Type %s (%u bytes total) to %s.",
+                UDP::S2C::EnumNameS2C_UDP_Payload(flatbufferPayloadType), packetBuffer.size(), recipient.ToString());
 
             return m_networkIO->SendData(recipient, packetBuffer.data(), static_cast<uint32_t>(packetBuffer.size()));
         }
 
         bool UDPPacketHandler::SendAckPacket(const NetworkEndpoint& recipient, ReliableConnectionState& connectionState) {
             if (!m_isRunning.load(std::memory_order_acquire)) return false;
-            // No explicit lock on connectionState.internalStateMutex here, PrepareOutgoingPacket will handle it.
 
-            RF_NETWORK_TRACE("UDPPacketHandler: Sending explicit ACK-only packet to {}. Current RemoteHighestSeq: {}, Current RemoteAckBits: 0x{:08X}",
+            RF_NETWORK_TRACE("UDPPacketHandler: Sending explicit ACK-only packet to %s. Current RemoteHighestSeq: %u, Current RemoteAckBits: 0x%08X",
                 recipient.ToString(), connectionState.highestReceivedSequenceNumberFromRemote, connectionState.receivedSequenceBitfield);
 
             uint8_t flags = static_cast<uint8_t>(GamePacketFlag::IS_RELIABLE) | static_cast<uint8_t>(GamePacketFlag::IS_ACK_ONLY);
 
-            // Call the free function from UDPReliabilityProtocol.cpp
             std::vector<uint8_t> packetBuffer = RiftForged::Networking::PrepareOutgoingPacket(
                 connectionState,
-                MessageType::Unknown, // No app payload for a pure ACK
-                nullptr, 0,
+                nullptr, 0, // No application payload for a pure ACK
                 flags
             );
 
             if (packetBuffer.empty()) {
-                RF_NETWORK_ERROR("UDPPacketHandler: SendAckPacket - PrepareOutgoingPacket returned empty for ACK to {}.", recipient.ToString());
+                RF_NETWORK_ERROR("UDPPacketHandler: SendAckPacket - PrepareOutgoingPacket returned empty for ACK to %s.", recipient.ToString());
                 return false;
             }
-            // PrepareOutgoingPacket now handles setting hasPendingAckToSend = false and lastPacketSentTimeToRemote
             return m_networkIO->SendData(recipient, packetBuffer.data(), static_cast<uint32_t>(packetBuffer.size()));
         }
 
         // --- Internal Helper for Handling Responses ---
-        void UDPPacketHandler::HandleResponseMessage(const std::optional<S2C_Response>& responseOpt, const NetworkEndpoint& originalSender) {
+        void UDPPacketHandler::HandleResponseMessage(const std::optional<S2C_Response>& responseOpt) {
             if (!responseOpt.has_value()) {
                 return;
             }
             const S2C_Response& response = responseOpt.value();
 
-            RF_NETWORK_DEBUG("UDPPacketHandler: Handling S2C_Response. Broadcast: {}, Recipient: [{}], Original Sender: [{}], MsgType: {}",
-                response.broadcast,
+            // Log using the FlatBuffers S2C payload type
+            RF_NETWORK_DEBUG("UDPPacketHandler: Handling S2C_Response. Broadcast: %s, Recipient: [%s], MsgType: %s",
+                response.broadcast ? "true" : "false",
                 response.specific_recipient.ToString(),
-                originalSender.ToString(), EnumNameMessageType(response.messageType));
+                UDP::S2C::EnumNameS2C_UDP_Payload(response.flatbuffer_payload_type));
 
-            // Get data from DetachedBuffer for sending
-            const uint8_t* responsePayloadData = response.data.data();
-            uint16_t responsePayloadSize = static_cast<uint16_t>(response.data.size());
-            // Create a temporary vector for the Send*Packet methods which expect std::vector
-            std::vector<uint8_t> payloadVec(responsePayloadData, responsePayloadData + responsePayloadSize);
+            // Use the data and type from the S2C_Response object
+            const flatbuffers::DetachedBuffer& payloadData = response.data;
+            UDP::S2C::S2C_UDP_Payload payloadType = response.flatbuffer_payload_type;
 
 
             if (response.broadcast) {
                 std::vector<NetworkEndpoint> all_clients = m_gameServerEngine.GetAllActiveSessionEndpoints();
-                // <<< MODIFICATION END >>>
-                RF_NETWORK_INFO("UDPPacketHandler: Broadcasting S2C_Response MsgType {} to {} clients.", EnumNameMessageType(response.messageType), all_clients.size());
+                RF_NETWORK_INFO("UDPPacketHandler: Broadcasting S2C_Response MsgType %s to %zu clients.",
+                    UDP::S2C::EnumNameS2C_UDP_Payload(payloadType), all_clients.size());
                 for (const auto& client_ep : all_clients) {
                     if (client_ep.ipAddress.empty() || client_ep.port == 0) continue;
-                    SendReliablePacket(client_ep, response.messageType, payloadVec); // Assuming reliable for broadcast responses
+                    // Assume reliable for broadcast game messages for now.
+                    // If some broadcasts can be unreliable, add logic here.
+                    SendReliablePacket(client_ep, payloadType, payloadData);
                 }
             }
             else {
                 NetworkEndpoint targetRecipient = response.specific_recipient;
-                if (targetRecipient.ipAddress.empty() || targetRecipient.port == 0) {
-                    targetRecipient = originalSender; // Default to replying to original sender
-                }
-
                 if (!targetRecipient.ipAddress.empty() && targetRecipient.port != 0) {
-                    SendReliablePacket(targetRecipient, response.messageType, payloadVec);
+                    // Assuming reliable for direct responses to clients.
+                    // If some direct responses can be unreliable, add logic here.
+                    SendReliablePacket(targetRecipient, payloadType, payloadData);
                 }
                 else {
-                    RF_NETWORK_ERROR("UDPPacketHandler: S2C_Response - Invalid target recipient and original sender info missing for MsgType {}.",
-                        EnumNameMessageType(response.messageType));
+                    RF_NETWORK_ERROR("UDPPacketHandler: S2C_Response - Invalid target recipient for MsgType %s. Cannot send.",
+                        UDP::S2C::EnumNameS2C_UDP_Payload(payloadType));
                 }
             }
         }
@@ -349,15 +353,14 @@ namespace RiftForged {
         // --- Private Reliability Protocol Methods ---
 
         std::shared_ptr<ReliableConnectionState> UDPPacketHandler::GetOrCreateReliabilityState(const NetworkEndpoint& endpoint) {
-            std::lock_guard<std::mutex> lock(m_reliabilityStatesMutex); // Protects the maps
+            std::lock_guard<std::mutex> lock(m_reliabilityStatesMutex);
             auto it = m_reliabilityStates.find(endpoint);
             if (it != m_reliabilityStates.end()) {
                 return it->second;
             }
             else {
-                RF_NETWORK_INFO("UDPPacketHandler: Creating new ReliableConnectionState for endpoint: {}", endpoint.ToString());
-                auto newState = std::make_shared<ReliableConnectionState>(); // Uses default constructor from UDPReliabilityProtocol.h
-                // newState->endpoint = endpoint; // If ReliableConnectionState stores its own endpoint for logging/debug
+                RF_NETWORK_INFO("UDPPacketHandler: Creating new ReliableConnectionState for endpoint: %s", endpoint.ToString());
+                auto newState = std::make_shared<ReliableConnectionState>();
                 m_reliabilityStates[endpoint] = newState;
                 m_endpointLastSeenTime[endpoint] = std::chrono::steady_clock::now();
                 return newState;
@@ -372,89 +375,79 @@ namespace RiftForged {
                 auto currentTime = std::chrono::steady_clock::now();
                 clientsToNotifyDropped.clear();
 
+                // List to store packets that need retransmission, along with their target endpoint.
                 std::vector<std::pair<NetworkEndpoint, std::vector<uint8_t>>> packetsToResendList;
+                // List to store endpoints for which an explicit ACK needs to be sent.
                 std::vector<NetworkEndpoint> endpointsNeedingExplicitAck;
 
-                // Scope for m_reliabilityStatesMutex
+                // Scope for m_reliabilityStatesMutex to safely iterate and modify connection states.
                 {
                     std::lock_guard<std::mutex> lock(m_reliabilityStatesMutex);
 
-                    for (auto it = m_reliabilityStates.begin(); it != m_reliabilityStates.end(); /* manual inc/erase */) {
+                    // Iterate through all active client connections.
+                    for (auto it = m_reliabilityStates.begin(); it != m_reliabilityStates.end(); /* manual increment/erase */) {
                         const NetworkEndpoint& endpoint = it->first;
                         std::shared_ptr<ReliableConnectionState> state = it->second;
-                        // No explicit lock on state->internalStateMutex here, free functions handle it.
 
-                        // 1. Check for retransmissions by calling the free function
+                        // 1. Check for retransmissions.
+                        // Call the free function from UDPReliabilityProtocol to get timed-out packets.
                         std::vector<std::vector<uint8_t>> retransmitPacketsForThisEndpoint =
-                            RiftForged::Networking::GetPacketsForRetransmission(*state, currentTime, DEFAULT_MAX_RETRIES_PKT);
+                            RiftForged::Networking::GetPacketsForRetransmission(*state, currentTime);
 
                         for (const auto& pktData : retransmitPacketsForThisEndpoint) {
                             packetsToResendList.emplace_back(endpoint, pktData);
                         }
 
-                        bool dropClientThisPass = false;
-                        if (state->connectionDroppedByMaxRetries) { // This flag is set by GetPacketsForRetransmission
-                            RF_NETWORK_WARN("UDPPacketHandler: Endpoint {} flagged for drop by MAX RETRIES.", endpoint.ToString());
+                        // Check if the connection needs to be dropped due to excessive retries
+                        bool dropClientThisPass = state->connectionDroppedByMaxRetries;
+                        if (dropClientThisPass) {
+                            RF_NETWORK_WARN("UDPPacketHandler: Endpoint %s flagged for drop by MAX RETRIES.", endpoint.ToString());
                             clientsToNotifyDropped.push_back(endpoint);
-                            dropClientThisPass = true;
                         }
 
-                        // 2. Check for stale connections (only if not already being dropped)
+                        // 2. Check for stale connections (only if not already being dropped by retries).
                         if (!dropClientThisPass) {
-                            auto lastSeenIt = m_endpointLastSeenTime.find(endpoint); // m_endpointLastSeenTime is updated in OnRawDataReceived
-                            // Also consider state->lastPacketReceivedTimeFromRemote for more precise staleness from their side
-
-                            bool isStale = false;
-                            // If we haven't heard from them in a while AND we are not actively trying to send them anything important.
+                            // Check if no packets have been received from the remote for a long time
+                            // AND we are not actively waiting for an ACK from them (unacknowledgedSentPackets is empty).
                             if (std::chrono::duration_cast<std::chrono::seconds>(currentTime - state->lastPacketReceivedTimeFromRemote).count() > STALE_CONNECTION_TIMEOUT_SECONDS_PKT &&
                                 state->unacknowledgedSentPackets.empty()) {
-                                isStale = true;
-                            }
-
-
-                            if (isStale) {
-                                RF_NETWORK_INFO("UDPPacketHandler: Endpoint {} flagged for drop due to STALENESS (no recent packets from them, nothing pending from us).", endpoint.ToString());
+                                RF_NETWORK_INFO("UDPPacketHandler: Endpoint %s flagged for drop due to STALENESS (no recent packets from them, nothing pending from us).", endpoint.ToString());
                                 clientsToNotifyDropped.push_back(endpoint);
                                 dropClientThisPass = true;
                             }
                         }
 
-                        // 3. Check for pending explicit ACKs
-                        bool justRetransmittedToThisClient = false;
-                        for (const auto& pair : packetsToResendList) { if (pair.first == endpoint) { justRetransmittedToThisClient = true; break; } }
-
-                        if (!dropClientThisPass && state->hasPendingAckToSend && !justRetransmittedToThisClient) {
-                            auto timeSinceLastSentByUs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                currentTime - state->lastPacketSentTimeToRemote);
-                            // Send explicit ACK if it's been a while (e.g., > 1.5 * reliability tick, to give other traffic a chance)
-                            if (state->lastPacketSentTimeToRemote == std::chrono::steady_clock::time_point::min() || // Never sent anything
-                                timeSinceLastSentByUs.count() > (RELIABILITY_THREAD_SLEEP_MS_PKT + (RELIABILITY_THREAD_SLEEP_MS_PKT / 2))) {
-                                endpointsNeedingExplicitAck.push_back(endpoint);
-                            }
+                        // 3. Check for pending explicit ACKs.
+                        // Only send explicit ACK if there's one pending and we haven't recently sent a data packet
+                        // that would piggyback the ACK.
+                        if (!dropClientThisPass && state->hasPendingAckToSend) {
+                            // The TrySendAckOnlyPacket helper function in UDPReliabilityProtocol will handle
+                            // the delay logic for sending the ACK, so we just need to provide the send function.
+                            endpointsNeedingExplicitAck.push_back(endpoint);
                         }
 
+                        // Handle connection removal if flagged for drop.
                         if (dropClientThisPass) {
-                            m_endpointLastSeenTime.erase(endpoint); // Clean up this map too
-                            it = m_reliabilityStates.erase(it);    // Erase and get next valid iterator
+                            m_endpointLastSeenTime.erase(endpoint); // Clean up last seen time map
+                            it = m_reliabilityStates.erase(it);      // Erase from reliability states map and get next iterator
                         }
                         else {
-                            ++it; // Advance iterator
+                            ++it; // Move to the next connection if not erased.
                         }
                     }
-                } // Mutex m_reliabilityStatesMutex is released here
+                } // Mutex m_reliabilityStatesMutex is released here.
 
-                // Perform network sends (retransmissions, ACKs) outside the main state lock
+                // --- Perform network sends outside the main state lock to prevent deadlocks ---
+                // Retransmit packets.
                 for (const auto& pair : packetsToResendList) {
-                    // The packetData from GetPacketsForRetransmission should ideally have updated ACK fields.
-                    // Your GetPacketsForRetransmission current logic just returns sentPacket.packetData.
-                    // For maximum correctness, it should reconstruct the header with current ACK info.
-                    // Assuming for now it returns data ready for send.
-                    RF_NETWORK_WARN("UDPPacketHandler: Retransmitting packet ({} bytes) to {}.", pair.second.size(), pair.first.ToString());
+                    RF_NETWORK_WARN("UDPPacketHandler: Retransmitting packet ({} bytes) to %s.", pair.second.size(), pair.first.ToString());
                     m_networkIO->SendData(pair.first, pair.second.data(), static_cast<uint32_t>(pair.second.size()));
                 }
 
+                // Send explicit ACK-only packets.
                 for (const auto& endpoint : endpointsNeedingExplicitAck) {
-                    std::shared_ptr<ReliableConnectionState> state; // Re-fetch state briefly as it might have been dropped
+                    std::shared_ptr<ReliableConnectionState> state;
+                    // Re-acquire lock to safely get shared_ptr (it might have been removed if it was also a "drop" client)
                     {
                         std::lock_guard<std::mutex> lock(m_reliabilityStatesMutex);
                         auto it = m_reliabilityStates.find(endpoint);
@@ -462,29 +455,33 @@ namespace RiftForged {
                             state = it->second;
                         }
                     }
-                    if (state) { // If state still exists
-                        SendAckPacket(endpoint, *state); // SendAckPacket calls PrepareOutgoingPacket which handles state->hasPendingAckToSend
+                    if (state) { // Only send if the connection state still exists (i.e., not dropped this cycle)
+                        // Using a lambda to pass the send function to TrySendAckOnlyPacket
+                        RiftForged::Networking::TrySendAckOnlyPacket(
+                            *state,
+                            currentTime,
+                            [this, &endpoint](const std::vector<uint8_t>& packetData) {
+                                // This lambda is executed on the reliability thread, but calls into m_networkIO (thread-safe).
+                                RF_NETWORK_TRACE("UDPPacketHandler: Sending explicit ACK-only packet to %s (via TrySendAckOnlyPacket).", endpoint.ToString());
+                                m_networkIO->SendData(endpoint, packetData.data(), static_cast<uint32_t>(packetData.size()));
+                            }
+                        );
                     }
                 }
 
-                // Notify PlayerManager about dropped clients (outside the lock)
+                // Notify GameServerEngine about dropped clients (outside the lock).
                 if (!clientsToNotifyDropped.empty()) {
-                    RF_NETWORK_INFO("UDPPacketHandler: Notifying PlayerManager about {} client(s) dropped.", clientsToNotifyDropped.size());
+                    RF_NETWORK_INFO("UDPPacketHandler: Notifying GameServerEngine about %zu client(s) dropped.", clientsToNotifyDropped.size());
                     for (const auto& droppedEndpoint : clientsToNotifyDropped) {
                         m_gameServerEngine.OnClientDisconnected(droppedEndpoint);
                     }
                 }
 
+                // Sleep to control the frequency of this management thread.
                 std::this_thread::sleep_for(std::chrono::milliseconds(RELIABILITY_THREAD_SLEEP_MS_PKT));
             }
             RF_NETWORK_INFO("UDPPacketHandler: ReliabilityManagementThread gracefully exited.");
         }
-
-        // The following private methods are now implemented as free functions in UDPReliabilityProtocol.cpp
-        // This class calls those free functions.
-        // - ProcessIncomingReliabilityHeader (called by OnRawDataReceived, calls free function)
-        // - PrepareOutgoingPacketBuffer (called by SendReliable/Unreliable/Ack, calls free function)
-        // - GetPacketsForRetransmission (called by ReliabilityManagementThread, calls free function)
 
     } // namespace Networking
 } // namespace RiftForged

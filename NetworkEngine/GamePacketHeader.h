@@ -1,95 +1,78 @@
-﻿#pragma once
+﻿// File: GamePacketHeader.h
+// RiftForged Game Engine
+// Copyright (C) 2022-2028 RiftForged Team
+
+#pragma once
+
 #include <cstdint> // For fixed-width integer types like uint32_t, uint16_t
 
 namespace RiftForged {
     namespace Networking {
 
+        // Define your overall network protocol ID version.
+        // This helps clients/servers detect incompatible protocol versions.
         const uint32_t CURRENT_PROTOCOL_ID_VERSION = 0x00000004; // Version 0.0.4 WITH PHYSX AND LOGIN PROCEDURES
 
-        enum class MessageType : uint16_t {
-            Unknown = 0, // Good to have a default/unknown
+        // Strong typedef for sequence numbers for better readability and type safety.
+        // Using uint32_t allows for a large range of sequence numbers before rollover.
+        using SequenceNumber = uint32_t;
 
-            C2S_MovementInput = 1,
-            C2S_TurnIntent = 2,
-            C2S_RiftStepActivation = 3,
-            C2S_BasicAttackIntent = 4,
-            C2S_UseAbility = 5,
-            C2S_Ping = 6,
-            C2S_JoinRequest = 7,  // <<< ADDED: For new clients requesting to join the shard
-            // C2S_ClientReady        = 8,  // Example: Client confirms it has loaded initial state after JoinSuccess
-            // C2S_AdminCommand       = 9,  // Example for later
-
-            // --- Server-to-Client (S2C) Messages ---
-            // These are distinct from C2S values. Starting S2C from 101 is a good way to differentiate.
-            // These should correspond conceptually to your S2C_UDP_Payload FlatBuffer enum values.
-            S2C_ReservedStart = 100, // Start of S2C block, not a message itself
-            S2C_EntityStateUpdate = 101,
-            S2C_RiftStepInitiated = 102,
-            S2C_ResourceUpdate = 103,
-            S2C_CombatEvent = 104,
-            S2C_Pong = 105,
-            S2C_SystemBroadcast = 106,
-            S2C_SpawnProjectile = 107,
-            S2C_JoinSuccess = 108, // <<< ADDED: To confirm successful join to the client
-            S2C_JoinFailed = 109, // <<< ADDED: To inform client if join failed (e.g., server full, auth issue)
-            S2C_PlayerDisconnected = 110, // <<< ADDED: To inform other clients a player left
-            S2C_EntityDestroyed = 111, // Example for when projectiles or other entities are removed
-
-            // Keep this updated if you add more
-            MessageType_MAX_VALUE // Helper for validation or iteration if needed, not a real message type
+        // --- Flags for GamePacketHeader::flags ---
+        // These flags describe how the *reliability layer* should interpret and process the packet.
+        // They are NOT directly related to the application-level message type (which is in FlatBuffers).
+        enum class GamePacketFlag : uint8_t {
+            NONE = 0,               // No special flags set
+            IS_RELIABLE = 1 << 0,   // This packet requires acknowledgment and retransmission
+            IS_ACK_ONLY = 1 << 1,   // This packet contains only ACK information, no application payload
+            IS_HEARTBEAT = 1 << 2,  // This is a keep-alive packet
+            IS_DISCONNECT = 1 << 3, // This packet signals a disconnection
+            IS_FRAGMENT_START = 1 << 4, // For future fragmentation implementation (indicates first fragment)
+            IS_FRAGMENT_END = 1 << 5,   // For future fragmentation implementation (indicates last fragment)
+            // Additional flags can be added here as needed for transport-layer concerns.
         };
 
-        // Helper function to get string name of MessageType
-        inline const char* EnumNameMessageType(MessageType e) {
-            switch (e) {
-                // C2S
-            case MessageType::Unknown: return "Unknown";
-            case MessageType::C2S_MovementInput: return "C2S_MovementInput";
-            case MessageType::C2S_RiftStepActivation: return "C2S_RiftStepActivation";
-            case MessageType::C2S_UseAbility: return "C2S_UseAbility";
-            case MessageType::C2S_Ping: return "C2S_Ping";
-            case MessageType::C2S_TurnIntent: return "C2S_TurnIntent";
-            case MessageType::C2S_JoinRequest: return "C2S_JoinRequest"; // <<< ADDED
+        // Helper functions to work with GamePacketFlag bitmask.
+        // These allow for easy bitwise operations on the flags enum.
+        inline GamePacketFlag operator|(GamePacketFlag a, GamePacketFlag b) {
+            return static_cast<GamePacketFlag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+        }
+        inline uint8_t& operator|=(uint8_t& existingFlags, GamePacketFlag flagToAdd) {
+            existingFlags |= static_cast<uint8_t>(flagToAdd);
+            return existingFlags;
+        }
+        inline bool HasFlag(uint8_t headerFlags, GamePacketFlag flagToCheck) {
+            // Special handling for GamePacketFlag::NONE: it means *no* flags are set.
+            if (flagToCheck == GamePacketFlag::NONE) return headerFlags == static_cast<uint8_t>(GamePacketFlag::NONE);
+            return (headerFlags & static_cast<uint8_t>(flagToCheck)) == static_cast<uint8_t>(flagToCheck);
+        }
 
-                // S2C
-            case MessageType::S2C_EntityStateUpdate: return "S2C_EntityStateUpdate";
-            case MessageType::S2C_RiftStepInitiated: return "S2C_RiftStepInitiated";
-            case MessageType::S2C_ResourceUpdate: return "S2C_ResourceUpdate";
-            case MessageType::S2C_CombatEvent: return "S2C_CombatEvent";
-            case MessageType::S2C_Pong: return "S2C_Pong";
-            case MessageType::S2C_SystemBroadcast: return "S2C_SystemBroadcast";
-            case MessageType::C2S_BasicAttackIntent: return "C2S_BasicAttackIntent";
-            case MessageType::S2C_SpawnProjectile: return "S2C_SpawnProjectile";
-            case MessageType::S2C_JoinSuccess: return "S2C_JoinSuccess";         // <<< ADDED
-            case MessageType::S2C_JoinFailed: return "S2C_JoinFailed";           // <<< ADDED
-            case MessageType::S2C_PlayerDisconnected: return "S2C_PlayerDisconnected"; // <<< ADDED
-            case MessageType::S2C_EntityDestroyed: return "S2C_EntityDestroyed";
+#pragma pack(push, 1) // Ensure no padding is added by the compiler, essential for network packets.
 
-            default: return "UnhandledMessageType";
-            }
-        };
-
-#pragma pack(push, 1)
+        // Defines the fixed-size header for all UDP packets in the RiftForged network protocol.
+        // This header is solely for the reliability and transport layers.
         struct GamePacketHeader {
-            uint32_t protocolId;
-            MessageType messageType;
-            uint32_t sequenceNumber;
-            uint32_t ackNumber;
-            uint32_t ackBitfield;
-            uint8_t flags;
-            // uint8_t reserved; // Optional for 16-byte alignment
+            uint32_t protocolId;      // The current version of the network protocol (for compatibility checks).
+            uint8_t flags;            // A bitmask of GamePacketFlag values, indicating packet properties.
+            SequenceNumber sequenceNumber; // This packet's unique ID for reliable delivery (0 for unreliable).
+            SequenceNumber ackNumber;      // Highest sequence number received from the remote peer (for ACKing their packets).
+            uint32_t ackBitfield;     // A bitfield of recently received (but not highest) sequence numbers from the remote.
 
-            GamePacketHeader(MessageType type = MessageType::Unknown, uint32_t seq = 0)
+            // Constructor initializes default values for a new header.
+            // Actual sequence/ack numbers are filled in by the reliability protocol.
+            GamePacketHeader(uint8_t initialFlags = static_cast<uint8_t>(GamePacketFlag::NONE))
                 : protocolId(CURRENT_PROTOCOL_ID_VERSION),
-                messageType(type),
-                sequenceNumber(seq),
-                ackNumber(0),
-                ackBitfield(0),
-                flags(0) {
+                flags(initialFlags),
+                sequenceNumber(0), // Placeholder; assigned by PrepareOutgoingPacket if IS_RELIABLE.
+                ackNumber(0),      // Placeholder; filled by PrepareOutgoingPacket with current remote ACK state.
+                ackBitfield(0)     // Placeholder; filled by PrepareOutgoingPacket with current remote ACK state.
+            {
             }
         };
-#pragma pack(pop)
 
+#pragma pack(pop) // Restore previous packing alignment.
+
+        // Helper function to get the size of the GamePacketHeader structure.
+        // Using constexpr allows this to be evaluated at compile time.
         constexpr size_t GetGamePacketHeaderSize() {
             return sizeof(GamePacketHeader);
         }

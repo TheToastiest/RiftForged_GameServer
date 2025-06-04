@@ -134,10 +134,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\NetworkEngine\UDPReliabilityProtocol.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\NetworkEngine\NetworkEngine.vcxproj">
+      <Project>{83001634-fddf-4b58-bb81-c47bb590e612}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\Utils\Utils.vcxproj">
       <Project>{b230bd30-0f70-4d1c-a3c1-386aa6325e63}</Project>
     </ProjectReference>

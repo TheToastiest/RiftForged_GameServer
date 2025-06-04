@@ -1,16 +1,11 @@
-﻿// File: TurnMessageHandler.cpp (Updated)
+﻿// File: TurnMessageHandler.cpp
 #include "TurnMessageHandler.h"
 
 // Adjust paths as necessary and ensure V0.0.3 for FlatBuffers
-#include "../Gameplay/ActivePlayer.h"   // <<< ADDED: For ActivePlayer full definition
-#include "../Gameplay/GameplayEngine.h" //
-#include "../Utils/Logger.h"            //
-// NetworkEndpoint.h is included via TurnMessageHandler.h -> NetworkCommon.h -> NetworkEndpoint.h
-// PlayerManager.h is likely included via GameplayEngine.h or TurnMessageHandler.h constructor
-
-// FlatBuffers (V0.0.3)
-#include "../FlatBuffers/V0.0.4/riftforged_c2s_udp_messages_generated.h" // For C2S_TurnIntentMsg
-#include "../FlatBuffers/V0.0.4/riftforged_s2c_udp_messages_generated.h" // Not strictly needed here unless creating S2C messages directly
+#include "../Gameplay/ActivePlayer.h"
+#include "../Gameplay/GameplayEngine.h"
+#include "../Utils/Logger.h"
+// No FlatBuffers S2C includes needed if not creating S2C messages directly
 
 namespace RiftForged {
     namespace Networking {
@@ -19,42 +14,62 @@ namespace RiftForged {
 
                 TurnMessageHandler::TurnMessageHandler(
                     RiftForged::GameLogic::PlayerManager& playerManager,
-                    RiftForged::Gameplay::GameplayEngine& gameplayEngine)
-                    : m_playerManager(playerManager),       //
-                    m_gameplayEngine(gameplayEngine) {    //
-                    RF_NETWORK_INFO("TurnMessageHandler: Constructed with PlayerManager and GameplayEngine."); //
+                    RiftForged::Gameplay::GameplayEngine& gameplayEngine,
+                    RiftForged::Utils::Threading::TaskThreadPool* taskPool) // New: Receive taskPool
+                    : m_playerManager(playerManager),
+                    m_gameplayEngine(gameplayEngine),
+                    m_taskThreadPool(taskPool) { // New: Initialize m_taskThreadPool
+                    RF_NETWORK_INFO("TurnMessageHandler: Constructed.");
+                    if (m_taskThreadPool) {
+                        RF_NETWORK_INFO("TurnMessageHandler: TaskThreadPool provided (though unlikely to be used here).");
+                    }
+                    else {
+                        RF_NETWORK_WARN("TurnMessageHandler: No TaskThreadPool provided.");
+                    }
                 }
 
-                // <<< MODIFIED Process method signature and implementation >>>
                 std::optional<RiftForged::Networking::S2C_Response> TurnMessageHandler::Process(
                     const RiftForged::Networking::NetworkEndpoint& sender_endpoint,
-                    RiftForged::GameLogic::ActivePlayer* player, // <<< Using passed-in player
-                    const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg* message) { //
+                    RiftForged::GameLogic::ActivePlayer* player,
+                    const RiftForged::Networking::UDP::C2S::C2S_TurnIntentMsg* message) {
 
-                    if (!message) { //
-                        RF_NETWORK_WARN("TurnMessageHandler: Received null C2S_TurnIntentMsg from {}", sender_endpoint.ToString()); //
+                    if (!message) {
+                        RF_NETWORK_WARN("TurnMessageHandler: Received null C2S_TurnIntentMsg from {}", sender_endpoint.ToString());
                         return std::nullopt;
                     }
 
-                    // The 'player' pointer is now passed in from MessageDispatcher.
                     if (!player) {
                         RF_NETWORK_WARN("TurnMessageHandler: Null player pointer received for endpoint {}. This should be caught earlier.", sender_endpoint.ToString());
                         return std::nullopt;
                     }
 
-                    // REMOVED: The call to m_playerManager.GetOrCreatePlayer(sender_endpoint);
-                    // RiftForged::GameLogic::ActivePlayer* player = m_playerManager.GetOrCreatePlayer(sender_endpoint/*, bool& out_was_newly_created*/);
+                    float turn_delta = message->turn_delta_degrees();
 
-                    float turn_delta = message->turn_delta_degrees(); //
+                    RF_NETWORK_TRACE("Player {} (endpoint: {}) sent TurnIntent: {:.2f} degrees.",
+                        player->playerId, sender_endpoint.ToString(), turn_delta);
 
-                    RF_NETWORK_TRACE("Player {} (endpoint: {}) sent TurnIntent: {} degrees.", //
-                        player->playerId, sender_endpoint.ToString(), turn_delta); //
+                    // Call GameplayEngine to process the turn.
+                    // This is a direct state modification and should typically occur synchronously
+                    // on the main simulation thread for consistency and immediate impact.
+                    m_gameplayEngine.TurnPlayer(player, turn_delta);
 
-                    // Call GameplayEngine to process the turn
-                    m_gameplayEngine.TurnPlayer(player, turn_delta); //
-                    // GameplayEngine::TurnPlayer directly updates player->orientation, sets player->isDirty = true,
-                    // and calls PhysicsEngine to update the PxController's actor orientation.
-                    // State updates (like S2C_EntityStateUpdateMsg) are typically sent by a separate game loop mechanism.
+                    // --- Thread Pool Usage (Not typically needed for turning) ---
+                    // While the m_taskThreadPool is available, turning logic is generally
+                    // lightweight and critical for real-time player control, so it's best
+                    // handled synchronously. There are typically no complex secondary tasks
+                    // that would warrant offloading to a thread pool for a simple turn.
+                    // If you envision a scenario where a turn triggers something heavy and non-blocking,
+                    // you could enqueue a task here (e.g., complex environmental scan based on new facing).
+                    // Example (if needed, but generally avoid for simple turn):
+                    // if (m_taskThreadPool) {
+                    //     uint64_t playerId_copy = player->playerId;
+                    //     // Capture immutable data needed by the async task
+                    //     m_taskThreadPool->enqueue([playerId_copy]() {
+                    //         // Perform some heavy, non-blocking background task
+                    //         std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                    //         RF_NETWORK_DEBUG("TurnMessageHandler (ThreadPool): Async task related to turn for Player {}", playerId_copy);
+                    //     });
+                    // }
 
                     return std::nullopt; // Turning doesn't typically generate a direct S2C response from its handler.
                 }

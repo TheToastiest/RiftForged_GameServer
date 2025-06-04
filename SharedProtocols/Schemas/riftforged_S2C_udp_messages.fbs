@@ -1,5 +1,5 @@
 ﻿// File: Schemas/riftforged_s2c_udp_messages.fbs
-// Protocol Version: 0.0.3
+// Protocol Version: 0.0.4
 // Description: Defines Server-to-Client messages for real-time UDP communication.
 // This file is part of Riftforged.
 // Copyright (C) 2023-2025 Riftforged Game Development Team

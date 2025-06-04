@@ -24,7 +24,7 @@
     <ProjectGuid>{83001634-fddf-4b58-bb81-c47bb590e612}</ProjectGuid>
     <RootNamespace>NetworkEngine</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>UDPServer</ProjectName>
+    <ProjectName>NetworkEngine</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -145,12 +145,14 @@
     <ClInclude Include="IMessageHandler.h" />
     <ClInclude Include="INetworkIO.h" />
     <ClInclude Include="INetworkIOEvents.h" />
+    <ClInclude Include="JoinRequestMessageHandler.h" />
     <ClInclude Include="MessageDispatcher.h" />
     <ClInclude Include="MovementMessageHandler.h" />
     <ClInclude Include="NetworkCommon.h" />
     <ClInclude Include="NetworkEndpoint.h" />
     <ClInclude Include="PacketProcessor.h" />
     <ClInclude Include="PingMessageHandler.h" />
+    <ClInclude Include="ReliableConnectionState.h" />
     <ClInclude Include="RiftStepMessageHandler.h" />
     <ClInclude Include="ServerConfig.h" />
     <ClInclude Include="TurnMessageHandler.h" />
@@ -163,6 +165,7 @@
   <ItemGroup>
     <ClCompile Include="AbilityMessageHandler.cpp" />
     <ClCompile Include="BasicAttackMessageHandler.cpp" />
+    <ClCompile Include="JoinRequestMessageHandler.cpp" />
     <ClCompile Include="MessageDispatcher.cpp" />
     <ClCompile Include="MovementMessageHandler.cpp" />
     <ClCompile Include="PacketProcessor.cpp" />

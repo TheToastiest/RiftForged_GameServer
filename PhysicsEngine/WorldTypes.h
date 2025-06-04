@@ -19,7 +19,7 @@ namespace physx {
 // For now, assuming ActivePlayer is the main type in zones.
 namespace RiftForged {
     namespace GameLogic {
-        class ActivePlayer; // Defined in "../Gameplay/ActivePlayer.h"
+        struct ActivePlayer; // Defined in "../Gameplay/ActivePlayer.h"
     }
 }
 

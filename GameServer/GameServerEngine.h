@@ -10,22 +10,21 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
-#include <any>      // For storing various command types
+#include <any>       // For storing various command types
 #include <deque>
 #include <map>
 #include <string>
-#include <optional> // For GetEndpointForPlayerId
+#include <optional>  // For GetEndpointForPlayerId
 
 // Core Game Logic/Engine Includes
 #include "../Gameplay/GameplayEngine.h"
 #include "../Gameplay/PlayerManager.h"
-#include "../Gameplay/ActivePlayer.h"     // Included via PlayerManager or GameplayEngine
+#include "../Gameplay/ActivePlayer.h"    // Included via PlayerManager or GameplayEngine
 #include "../PhysicsEngine/PhysicsEngine.h"
 
 // Networking
 #include "../NetworkEngine/UDPPacketHandler.h"
 #include "../NetworkEngine/NetworkEndpoint.h"
-#include "../NetworkEngine/GamePacketHeader.h" // For MessageType enum for S2C
 
 // FlatBuffer Declarations (C2S for command types, S2C for sending, Common for shared types)
 #include "../FlatBuffers/V0.0.4/riftforged_common_types_generated.h"
@@ -35,6 +34,7 @@
 // Utilities
 #include "../Utils/Logger.h"
 #include "../Utils/MathUtil.h"
+#include "../Utils/ThreadPool.h" // Assuming the path to TaskThreadPool.h
 
 // Aliases
 namespace RF_C2S = RiftForged::Networking::UDP::C2S;
@@ -42,21 +42,19 @@ namespace RF_S2C = RiftForged::Networking::UDP::S2C;
 namespace RF_Shared = RiftForged::Networking::Shared;
 namespace RF_Net = RiftForged::Networking;
 namespace RF_GameLogic = RiftForged::GameLogic;
-
+namespace RF_Physics = RiftForged::Physics;
+namespace RF_ThreadPool = RiftForged::Utils::Threading; // Reinstated and confirmed alias
 
 namespace RiftForged {
     namespace Server {
-
-        // Forward declare specific C2S message T-types (Object API types) if they are stored directly in std::any
-        // This helps with clarity if you're unpacking to these before queueing.
 
         class GameServerEngine {
         public:
             GameServerEngine(
                 RiftForged::GameLogic::PlayerManager& playerManager,
                 RiftForged::Gameplay::GameplayEngine& gameplayEngine,
-                //RiftForged::Networking::UDPPacketHandler& packetHandler,
                 RiftForged::Physics::PhysicsEngine& physicsEngine,
+                size_t numThreadPoolThreads = 0, // Parameter for TaskThreadPool's thread count
                 std::chrono::milliseconds tickInterval = std::chrono::milliseconds(10)
             );
             ~GameServerEngine();
@@ -64,8 +62,10 @@ namespace RiftForged {
             GameServerEngine(const GameServerEngine&) = delete;
             GameServerEngine& operator=(const GameServerEngine&) = delete;
 
+            bool Initialize();
             void StartSimulationLoop();
             void StopSimulationLoop();
+            void Shutdown();
 
             // --- Session Management ---
             uint64_t OnClientAuthenticatedAndJoining(const RiftForged::Networking::NetworkEndpoint& newEndpoint,
@@ -74,31 +74,38 @@ namespace RiftForged {
             uint64_t GetPlayerIdForEndpoint(const RiftForged::Networking::NetworkEndpoint& endpoint) const;
             std::optional<RiftForged::Networking::NetworkEndpoint> GetEndpointForPlayerId(uint64_t playerId) const;
             void QueueClientJoinRequest(const Networking::NetworkEndpoint& endpoint, const std::string& characterIdToLoad);
-            //void QueueClientDisconnectRequest(const Networking::NetworkEndpoint& endpoint);
-            //void ProcessJoinRequests();
-            //void ProcessDisconnectRequests(const Networking::NetworkEndpoint& endpoint);
+
             // --- Incoming Command Submission ---
-            // MessageDispatcher calls this after parsing a packet and resolving PlayerId.
-            // The std::any should ideally hold an unpacked T-object (e.g., C2S_MovementInputMsgT)
-            // or a structure that can be easily type-checked and cast.
             void SubmitPlayerCommand(uint64_t playerId, std::any commandPayload);
 
             std::vector<RiftForged::Networking::NetworkEndpoint> GetAllActiveSessionEndpoints() const;
 
             RiftForged::GameLogic::PlayerManager& GetPlayerManager();
-            const RiftForged::GameLogic::PlayerManager& GetPlayerManager() const; // Optional const version
+            const RiftForged::GameLogic::PlayerManager& GetPlayerManager() const;
 
             void SetPacketHandler(RiftForged::Networking::UDPPacketHandler* handler);
 
+            // Accessor for the internal thread pool, using the correct alias
+            // Declarations only, definitions will be in .cpp
+            RF_ThreadPool::TaskThreadPool& GetGameLogicThreadPool(); // <<< DECLARATION ONLY
+            const RF_ThreadPool::TaskThreadPool& GetGameLogicThreadPool() const; // <<< DECLARATION ONLY
+
+            bool isSimulating() const;
+
+            /**
+             * @brief Returns the server's simulation tick rate in Hertz.
+             * This value is derived from the m_tickIntervalMs.
+             * @return The tick rate in Hz.
+             */
+            uint16_t GetServerTickRateHz() const;
 
         private:
             void SimulationTick();
-            void ProcessPlayerCommands(); // Processes commands from m_incomingCommandQueue
+            void ProcessPlayerCommands();
 
             struct ClientJoinRequest {
                 Networking::NetworkEndpoint endpoint;
                 std::string characterIdToLoad;
-                // You can add other data here if needed, like auth tokens, etc.
             };
 
             // --- Core Components ---
@@ -107,17 +114,19 @@ namespace RiftForged {
             RiftForged::Networking::UDPPacketHandler* m_packetHandlerPtr;
             RiftForged::Physics::PhysicsEngine& m_physicsEngine;
 
-			// Join / Disconnect Requests & Queues
+            // --- Game Logic Thread Pool ---
+            RF_ThreadPool::TaskThreadPool m_gameLogicThreadPool;
+
+            // Join / Disconnect Requests & Queues
             std::deque<ClientJoinRequest> m_joinRequestQueue;
             std::mutex m_joinRequestQueueMutex;
             void ProcessJoinRequests();
             void ProcessDisconnectRequests();
-            void SendJoinFailedResponse(RF_Net::UDPPacketHandler* packetHandler,
-                const Networking::NetworkEndpoint& recipient,
-                const std::string& reason_message,
-                int16_t reason_code = 0);
+            // private helper if needed for internal reasons (not called by handlers anymore)
+            // void SendJoinFailedResponse(RF_Net::UDPPacketHandler* packetHandler, const Networking::NetworkEndpoint& recipient, const std::string& reason_message_str, int16_t reason_code);
             std::deque<Networking::NetworkEndpoint> m_disconnectRequestQueue;
             std::mutex m_disconnectRequestQueueMutex;
+
             // --- Simulation Loop Control ---
             std::atomic<bool> m_isSimulatingThread;
             std::thread m_simulationThread;
@@ -125,6 +134,7 @@ namespace RiftForged {
             bool m_timerResolutionWasSet;
             std::mutex m_shutdownThreadMutex;
             std::condition_variable m_shutdownThreadCv;
+
             // --- Session Mapping ---
             std::map<std::string, uint64_t> m_endpointKeyToPlayerIdMap;
             std::map<uint64_t, RiftForged::Networking::NetworkEndpoint> m_playerIdToEndpointMap;
@@ -133,7 +143,7 @@ namespace RiftForged {
             // --- Command Queue ---
             struct QueuedPlayerCommand {
                 uint64_t playerId;
-                std::any commandPayload; // Holds specific C2S *T type objects (e.g., C2S_MovementInputMsgT)
+                std::any commandPayload;
             };
             std::deque<QueuedPlayerCommand> m_incomingCommandQueue;
             std::mutex m_commandQueueMutex;

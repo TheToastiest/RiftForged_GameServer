@@ -6,64 +6,60 @@
 
 #pragma once
 
-#include "NetworkEndpoint.h"  // For NetworkEndpoint (sender information)
-#include "GamePacketHeader.h" // For MessageType enum (defines what kind of message this is)
-#include <vector>             // For std::vector (though payload is raw pointer)
-#include <cstdint>            // For uint8_t, uint16_t
-#include <optional>           // For std::optional (to return a potential response)
+#include "NetworkEndpoint.h"    // For NetworkEndpoint (sender information)
+// REMOVED: #include "GamePacketHeader.h" // No longer defines application-level MessageType.
 
-// Forward declaration for the S2C_Response structure.
-// Ensure S2C_Response is defined in a way that's accessible when this is compiled,
-// often in a shared header like "NetworkCommon.h" or similar.
-// If it's simple enough, it could also be defined directly in a shared scope.
+#include <cstdint>              // For uint8_t, uint16_t
+#include <optional>             // For std::optional (to return a potential response)
+
+// Include the header that defines S2C_Response.
+// This struct now holds the FlatBuffer S2C payload type and serialized data.
+#include "NetworkCommon.h" // Assuming S2C_Response is defined here.
+
+// Forward declaration for the ActivePlayer class, as MessageHandler operates on game state.
 namespace RiftForged {
-    namespace Networking {
-        // This struct would define what information is needed for the PacketHandler
-        // to send a response. Example:
-        // struct S2C_Response {
-        //     bool broadcast; // True if this response goes to all clients
-        //     NetworkEndpoint specific_recipient; // Valid if broadcast is false
-        //     MessageType messageType; // The type of the S2C message to send
-        //     std::vector<uint8_t> data; // The payload of the S2C message
-        // };
-        struct S2C_Response; // Assuming it's defined elsewhere, e.g., NetworkCommon.h
-    } // namespace Networking
-} // namespace RiftForged
-
+    namespace GameLogic {
+        struct ActivePlayer;
+    }
+}
 
 namespace RiftForged {
     namespace Networking {
 
+        // IMessageHandler is an abstract interface that concrete message processing classes
+        // (like MessageDispatcher) must implement. It provides the entry point for
+        // application-level data from the network layer.
         class IMessageHandler {
         public:
-            // Virtual destructor is important for interfaces to ensure proper cleanup
-            // when objects are deleted via a base class pointer.
+            // A virtual destructor is essential for base classes in C++ to ensure that
+            // derived class destructors are called correctly when deleting objects
+            // through a base class pointer.
             virtual ~IMessageHandler() = default;
 
             /**
-             * @brief Processes a fully validated application-level message payload.
-             * This method is called by the PacketHandler after it has processed
-             * network packet headers and reliability information.
+             * @brief Processes a raw, validated application-level message payload.
+             * This method is called by the UDPPacketHandler after it has handled
+             * network packet headers and reliability concerns. The payload is expected
+             * to be a FlatBuffer.
              *
              * @param sender The network endpoint from which the message originated.
-             * @param messageId The type of the message, as defined in your MessageType enum
-             * (from GamePacketHeader.h). This tells the MessageHandler
-             * how to interpret the flatbufferData.
-             * @param flatbufferData Pointer to the start of the FlatBuffer data, which is
-             * the actual application-level payload.
-             * @param flatbufferSize Size of the FlatBuffer data in bytes.
-             * @return std::optional<S2C_Response> - If the processing of this message
-             * requires a direct response to be sent back (either to the sender
-             * or broadcast), this structure should be populated and returned.
-             * If no direct response is needed, std::nullopt can be returned.
-             * The PacketHandler will be responsible for taking this S2C_Response
-             * and using its own send methods to dispatch the network packet(s).
+             * @param flatbuffer_payload_ptr Pointer to the start of the raw FlatBuffer data.
+             * @param flatbuffer_payload_size Size of the raw FlatBuffer data in bytes.
+             * @param player A pointer to the ActivePlayer associated with the sender.
+             * This can be `nullptr` for initial connection messages (like a `JoinRequest`)
+             * if the `ActivePlayer` object is created *after* processing that specific message.
+             * @return `std::optional<S2C_Response>` - If processing this message requires a direct response
+             * to be sent back (either to the sender or as a broadcast), this structure should be
+             * populated and returned. If no direct response is needed, `std::nullopt` is returned.
+             * The `UDPPacketHandler` will be responsible for taking this `S2C_Response`
+             * and dispatching it over the network.
              */
             virtual std::optional<S2C_Response> ProcessApplicationMessage(
                 const NetworkEndpoint& sender,
-                MessageType messageId,      // Using the MessageType enum from GamePacketHeader.h
-                const uint8_t* flatbufferData,
-                uint16_t flatbufferSize) = 0;
+                const uint8_t* flatbuffer_payload_ptr,
+                uint16_t flatbuffer_payload_size,
+                RiftForged::GameLogic::ActivePlayer* player
+            ) = 0; // Declared as a pure virtual function, making IMessageHandler an abstract class.
         };
 
     } // namespace Networking
