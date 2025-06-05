@@ -25,6 +25,37 @@ enum CombatEventType : byte {
   AbilityInterrupt = 8
 }
 
+// --- NEW FAILURE REASON ENUMS ---
+enum BasicAttackFailureReason : byte {
+  UNKNOWN = 0,
+  ON_COOLDOWN = 1,
+  OUT_OF_RANGE = 2,
+  INVALID_TARGET = 3,
+  NOT_ENOUGH_RESOURCES = 4,
+  OBSTRUCTED = 5 // e.g., line of sight blocked
+}
+
+enum RiftStepFailureReason : byte {
+  UNKNOWN = 0,
+  ON_COOLDOWN = 1,
+  NOT_ENOUGH_RESOURCES = 2,
+  OBSTRUCTED = 3, // Cannot RiftStep through solid objects
+  INVALID_DESTINATION = 4 // e.g., trying to step into a forbidden zone
+}
+
+enum AbilityFailureReason : byte {
+  UNKNOWN = 0,
+  ON_COOLDOWN = 1,
+  NOT_ENOUGH_RESOURCES = 2,
+  INVALID_TARGET = 3,
+  OUT_OF_RANGE = 4,
+  INTERRUPTED = 5,
+  CHANNELING_FAILED = 6,
+  MISSING_REQUIREMENTS = 7 // e.g., wrong weapon type, specific stance
+}
+// --- END NEW FAILURE REASON ENUMS ---
+
+
 //-----------------------------------------------------------------------------
 // S2C Effect Data Table Definitions (for RiftStepEffectPayload and other abilities)
 //-----------------------------------------------------------------------------
@@ -74,6 +105,29 @@ table S2C_SpawnProjectileMsg {
   max_range:float;
   projectile_vfx_tag:string;
 }
+
+// --- NEW FAILURE MESSAGE TABLES ---
+table S2C_BasicAttackFailedMsg {
+  player_id:ulong; // The player who attempted the attack
+  reason:BasicAttackFailureReason;
+  // Optionally, you could include remaining cooldown time here if the client needs to display it
+  // cooldown_remaining_ms:ulong;
+}
+
+table S2C_RiftStepFailedMsg {
+  player_id:ulong; // The player who attempted RiftStep
+  reason:RiftStepFailureReason;
+  // Optional: Add `actual_player_position:Shared.Vec3;` if client needs to re-sync
+}
+
+table S2C_AbilityFailedMsg {
+  player_id:ulong; // The player who attempted the ability
+  ability_id:uint; // The ID of the ability that failed
+  reason:AbilityFailureReason;
+  // Optional: Add more context, e.g., `resource_missing:ResourceType;`
+}
+// --- END NEW FAILURE MESSAGE TABLES ---
+
 
 //-----------------------------------------------------------------------------
 // S2C Unions using the above tables
@@ -146,15 +200,13 @@ table S2C_SystemBroadcastMsg {
 // <<< NEWLY ADDED S2C MESSAGES FOR JOIN PROCESS >>>
 table S2C_JoinSuccessMsg {
   assigned_player_id:ulong; // The ID the client should use for itself
-  welcome_message:string;              // Optional: e.g., "Welcome to RiftForged Shard Alpha!"
-  server_tick_rate_hz:ushort;          // Optional: Inform client about current server tick rate (in Hz)
-  // You could add other initial critical state here if needed, e.g., initial resources,
-  // or simply rely on the first S2C_EntityStateUpdate to convey full player state.
+  welcome_message:string;             // Optional: e.g., "Welcome to RiftForged Shard Alpha!"
+  server_tick_rate_hz:ushort;         // Optional: Inform client about current server tick rate (in Hz)
 }
 
 table S2C_JoinFailedMsg {
-  reason_message:string;               // E.g., "Server full.", "Invalid character data.", "Authentication failed."
-  reason_code:short;                   // Optional: An enum or error code for specific failure reasons
+  reason_message:string;              // E.g., "Server full.", "Invalid character data.", "Authentication failed."
+  reason_code:short;                  // Optional: An enum or error code for specific failure reasons
 }
 // <<< END NEWLY ADDED S2C MESSAGES >>>
 
@@ -172,12 +224,19 @@ union S2C_UDP_Payload { // FlatBuffers will assign type 0 to NONE implicitly if 
   SpawnProjectile:S2C_SpawnProjectileMsg,
   SystemBroadcast:S2C_SystemBroadcastMsg,
   Pong:S2C_PongMsg,
-  S2C_JoinSuccessMsg,   // <<< ADDED TO UNION
-  S2C_JoinFailedMsg     // <<< ADDED TO UNION
+  S2C_JoinSuccessMsg,
+  S2C_JoinFailedMsg,
+  // --- NEWLY ADDED FAILURE MESSAGES TO UNION ---
+  BasicAttackFailed:S2C_BasicAttackFailedMsg,
+  RiftStepFailed:S2C_RiftStepFailedMsg,
+  AbilityFailed:S2C_AbilityFailedMsg
+  // --- END NEWLY ADDED FAILURE MESSAGES TO UNION ---
 }
 
 table Root_S2C_UDP_Message {
-  payload:S2C_UDP_Payload (required);
+  payload:S2C_UDP_Payload; // Required field to indicate the type of payload
+  
+                               // FlatBuffers unions handle this for you.
 }
 
 root_type Root_S2C_UDP_Message;

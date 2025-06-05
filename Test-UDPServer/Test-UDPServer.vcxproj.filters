@@ -13,10 +13,18 @@
     <Filter Include="Network\ClientSocket">
       <UniqueIdentifier>{b9d768c7-c314-4f80-9e8d-358e439fbec4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="PrivateKey">
+      <UniqueIdentifier>{f6a022af-de78-4e97-874d-ff1218d44f22}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
       <Filter>EntryPoint</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Constants.h">
+      <Filter>PrivateKey</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -55,7 +55,7 @@ namespace RiftForged {
                 RiftForged::Gameplay::GameplayEngine& gameplayEngine,
                 RiftForged::Physics::PhysicsEngine& physicsEngine,
                 size_t numThreadPoolThreads = 0, // Parameter for TaskThreadPool's thread count
-                std::chrono::milliseconds tickInterval = std::chrono::milliseconds(10)
+                std::chrono::milliseconds tickInterval = std::chrono::milliseconds(5)
             );
             ~GameServerEngine();
 

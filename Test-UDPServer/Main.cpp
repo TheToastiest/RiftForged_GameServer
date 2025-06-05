@@ -422,7 +422,7 @@ int main() {
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(12345); // Default server port
-    const char* serverIp = "127.0.0.1"; // Changed to localhost for easier local testing
+    const char* serverIp = "192.168.50.186"; // Changed to localhost for easier local testing
     if (inet_pton(AF_INET, serverIp, &serverAddr.sin_addr) != 1) {
         RF_CORE_CRITICAL("Client: inet_pton failed for IP {}: {}", serverIp, WSAGetLastError());
         closesocket(clientSocket);

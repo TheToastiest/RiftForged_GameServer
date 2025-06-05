@@ -1,60 +1,129 @@
-﻿#include "CryptoManager.h"
+﻿// File: CryptoManager.cpp
+#include "CryptoManager.h"
+// Include libsodium headers if not already pulled in by CryptoManager.h
+// or if specific implementation details here need them.
+// e.g., #include "sodium.h"
 
-CryptoManager& CryptoManager::GetInstance() {
-    static CryptoManager instance;
-    return instance;
-}
+// --- ChaCha20-Poly1305 Definitions ---
+std::vector<uint8_t> CryptoManager::EncryptChaCha20Poly1305(
+    const std::vector<uint8_t>& plaintext,
+    const std::vector<uint8_t>& key,
+    const std::vector<uint8_t>& nonce) {
 
-// ChaCha20-Poly1305 Encryption
-std::vector<uint8_t> CryptoManager::EncryptChaCha20Poly1305(const std::vector<uint8_t>& plaintext, const std::vector<uint8_t>& key, const std::vector<uint8_t>& nonce) {
+    if (key.size() != crypto_aead_chacha20poly1305_KEYBYTES) {
+        throw std::runtime_error("EncryptChaCha20Poly1305: Invalid key size.");
+    }
+    if (nonce.size() != crypto_aead_chacha20poly1305_NPUBBYTES) {
+        throw std::runtime_error("EncryptChaCha20Poly1305: Invalid nonce size.");
+    }
+
     std::vector<uint8_t> ciphertext(plaintext.size() + crypto_aead_chacha20poly1305_ABYTES);
     unsigned long long ciphertext_len;
 
-    if (crypto_aead_chacha20poly1305_encrypt(ciphertext.data(), &ciphertext_len,
-        plaintext.data(), plaintext.size(), NULL, 0, NULL,
+    // Assuming no additional authenticated data (AAD)
+    if (crypto_aead_chacha20poly1305_encrypt(
+        ciphertext.data(), &ciphertext_len,
+        plaintext.data(), plaintext.size(),
+        NULL, 0, // AAD and AAD length
+        NULL,     // nsec - not used, must be NULL
         nonce.data(), key.data()) != 0) {
-        throw std::runtime_error("ChaCha20-Poly1305 encryption failed.");
+        throw std::runtime_error("EncryptChaCha20Poly1305: Encryption failed.");
     }
-
+    // Resize ciphertext to actual length, though libsodium usually fills it if buffer is exact
+    ciphertext.resize(ciphertext_len);
     return ciphertext;
 }
 
-// ChaCha20-Poly1305 Decryption
-std::vector<uint8_t> CryptoManager::DecryptChaCha20Poly1305(const std::vector<uint8_t>& ciphertext, const std::vector<uint8_t>& key, const std::vector<uint8_t>& nonce) {
+std::vector<uint8_t> CryptoManager::DecryptChaCha20Poly1305(
+    const std::vector<uint8_t>& ciphertext,
+    const std::vector<uint8_t>& key,
+    const std::vector<uint8_t>& nonce) {
+
+    if (key.size() != crypto_aead_chacha20poly1305_KEYBYTES) {
+        throw std::runtime_error("DecryptChaCha20Poly1305: Invalid key size.");
+    }
+    if (nonce.size() != crypto_aead_chacha20poly1305_NPUBBYTES) {
+        throw std::runtime_error("DecryptChaCha20Poly1305: Invalid nonce size.");
+    }
+    if (ciphertext.size() < crypto_aead_chacha20poly1305_ABYTES) {
+        throw std::runtime_error("DecryptChaCha20Poly1305: Ciphertext too short.");
+    }
+
     std::vector<uint8_t> decrypted(ciphertext.size() - crypto_aead_chacha20poly1305_ABYTES);
     unsigned long long decrypted_len;
 
-    if (crypto_aead_chacha20poly1305_decrypt(decrypted.data(), &decrypted_len, NULL,
-        ciphertext.data(), ciphertext.size(), NULL, 0, nonce.data(),
-        key.data()) != 0) {
-        throw std::runtime_error("ChaCha20-Poly1305 decryption failed.");
+    if (crypto_aead_chacha20poly1305_decrypt(
+        decrypted.data(), &decrypted_len,
+        NULL,     // nsec - not used, must be NULL
+        ciphertext.data(), ciphertext.size(),
+        NULL, 0, // AAD and AAD length
+        nonce.data(), key.data()) != 0) {
+        throw std::runtime_error("DecryptChaCha20Poly1305: Decryption failed (authentication tag mismatch or corrupted data).");
     }
-
+    decrypted.resize(decrypted_len);
     return decrypted;
 }
 
-// AES-256-GCM Encryption
-std::vector<uint8_t> CryptoManager::EncryptAES_GCM(const std::vector<uint8_t>& plaintext, const std::vector<uint8_t>& key, const std::vector<uint8_t>& nonce) {
+// --- AES-256-GCM Definitions ---
+std::vector<uint8_t> CryptoManager::EncryptAES_GCM(
+    const std::vector<uint8_t>& plaintext,
+    const std::vector<uint8_t>& key,
+    const std::vector<uint8_t>& nonce) {
+
+    if (!crypto_aead_aes256gcm_is_available()) {
+        throw std::runtime_error("AES-GCM is not available on this platform!");
+    }
+    if (key.size() != crypto_aead_aes256gcm_KEYBYTES) {
+        throw std::runtime_error("EncryptAES_GCM: Invalid key size.");
+    }
+    if (nonce.size() != crypto_aead_aes256gcm_NPUBBYTES) {
+        throw std::runtime_error("EncryptAES_GCM: Invalid nonce size.");
+    }
+
     std::vector<uint8_t> ciphertext(plaintext.size() + crypto_aead_aes256gcm_ABYTES);
     unsigned long long ciphertext_len;
 
-    if (crypto_aead_aes256gcm_encrypt(ciphertext.data(), &ciphertext_len,
-        plaintext.data(), plaintext.size(), NULL, 0, NULL,
+    if (crypto_aead_aes256gcm_encrypt(
+        ciphertext.data(), &ciphertext_len,
+        plaintext.data(), plaintext.size(),
+        NULL, 0, // AAD
+        NULL,     // nsec
         nonce.data(), key.data()) != 0) {
-        throw std::runtime_error("AES-256-GCM encryption failed.");
+        throw std::runtime_error("EncryptAES_GCM: Encryption failed.");
     }
-
+    ciphertext.resize(ciphertext_len);
     return ciphertext;
 }
 
-// AES-256-GCM Decryption
-std::vector<uint8_t> CryptoManager::DecryptAES_GCM(const std::vector<uint8_t>& ciphertext, const std::vector<uint8_t>& key, const std::vector<uint8_t>& nonce) {
-	std::vector<uint8_t> decrypted(ciphertext.size() - crypto_aead_aes256gcm_ABYTES);
-	unsigned long long decrypted_len;
-	if (crypto_aead_aes256gcm_decrypt(decrypted.data(), &decrypted_len, NULL,
-		ciphertext.data(), ciphertext.size(), NULL, 0, nonce.data(),
-		key.data()) != 0) {
-		throw std::runtime_error("AES-256-GCM decryption failed.");
-	}
-	return decrypted;
+std::vector<uint8_t> CryptoManager::DecryptAES_GCM(
+    const std::vector<uint8_t>& ciphertext,
+    const std::vector<uint8_t>& key,
+    const std::vector<uint8_t>& nonce) {
+
+    if (!crypto_aead_aes256gcm_is_available()) {
+        throw std::runtime_error("AES-GCM is not available on this platform!");
+    }
+    if (key.size() != crypto_aead_aes256gcm_KEYBYTES) {
+        throw std::runtime_error("DecryptAES_GCM: Invalid key size.");
+    }
+    if (nonce.size() != crypto_aead_aes256gcm_NPUBBYTES) {
+        throw std::runtime_error("DecryptAES_GCM: Invalid nonce size.");
+    }
+    if (ciphertext.size() < crypto_aead_aes256gcm_ABYTES) {
+        throw std::runtime_error("DecryptAES_GCM: Ciphertext too short.");
+    }
+
+    std::vector<uint8_t> decrypted(ciphertext.size() - crypto_aead_aes256gcm_ABYTES);
+    unsigned long long decrypted_len;
+
+    if (crypto_aead_aes256gcm_decrypt(
+        decrypted.data(), &decrypted_len,
+        NULL,     // nsec
+        ciphertext.data(), ciphertext.size(),
+        NULL, 0, // AAD
+        nonce.data(), key.data()) != 0) {
+        throw std::runtime_error("DecryptAES_GCM: Decryption failed (authentication tag mismatch or corrupted data).");
+    }
+    decrypted.resize(decrypted_len);
+    return decrypted;
 }

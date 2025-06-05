@@ -44,6 +44,18 @@ struct S2C_SpawnProjectileMsg;
 struct S2C_SpawnProjectileMsgBuilder;
 struct S2C_SpawnProjectileMsgT;
 
+struct S2C_BasicAttackFailedMsg;
+struct S2C_BasicAttackFailedMsgBuilder;
+struct S2C_BasicAttackFailedMsgT;
+
+struct S2C_RiftStepFailedMsg;
+struct S2C_RiftStepFailedMsgBuilder;
+struct S2C_RiftStepFailedMsgT;
+
+struct S2C_AbilityFailedMsg;
+struct S2C_AbilityFailedMsgBuilder;
+struct S2C_AbilityFailedMsgT;
+
 struct S2C_EntityStateUpdateMsg;
 struct S2C_EntityStateUpdateMsgBuilder;
 struct S2C_EntityStateUpdateMsgT;
@@ -162,6 +174,135 @@ inline const char *EnumNameCombatEventType(CombatEventType e) {
   if (::flatbuffers::IsOutRange(e, CombatEventType_None, CombatEventType_AbilityInterrupt)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesCombatEventType()[index];
+}
+
+enum BasicAttackFailureReason : int8_t {
+  BasicAttackFailureReason_UNKNOWN = 0,
+  BasicAttackFailureReason_ON_COOLDOWN = 1,
+  BasicAttackFailureReason_OUT_OF_RANGE = 2,
+  BasicAttackFailureReason_INVALID_TARGET = 3,
+  BasicAttackFailureReason_NOT_ENOUGH_RESOURCES = 4,
+  BasicAttackFailureReason_OBSTRUCTED = 5,
+  BasicAttackFailureReason_MIN = BasicAttackFailureReason_UNKNOWN,
+  BasicAttackFailureReason_MAX = BasicAttackFailureReason_OBSTRUCTED
+};
+
+inline const BasicAttackFailureReason (&EnumValuesBasicAttackFailureReason())[6] {
+  static const BasicAttackFailureReason values[] = {
+    BasicAttackFailureReason_UNKNOWN,
+    BasicAttackFailureReason_ON_COOLDOWN,
+    BasicAttackFailureReason_OUT_OF_RANGE,
+    BasicAttackFailureReason_INVALID_TARGET,
+    BasicAttackFailureReason_NOT_ENOUGH_RESOURCES,
+    BasicAttackFailureReason_OBSTRUCTED
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesBasicAttackFailureReason() {
+  static const char * const names[7] = {
+    "UNKNOWN",
+    "ON_COOLDOWN",
+    "OUT_OF_RANGE",
+    "INVALID_TARGET",
+    "NOT_ENOUGH_RESOURCES",
+    "OBSTRUCTED",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameBasicAttackFailureReason(BasicAttackFailureReason e) {
+  if (::flatbuffers::IsOutRange(e, BasicAttackFailureReason_UNKNOWN, BasicAttackFailureReason_OBSTRUCTED)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesBasicAttackFailureReason()[index];
+}
+
+enum RiftStepFailureReason : int8_t {
+  RiftStepFailureReason_UNKNOWN = 0,
+  RiftStepFailureReason_ON_COOLDOWN = 1,
+  RiftStepFailureReason_NOT_ENOUGH_RESOURCES = 2,
+  RiftStepFailureReason_OBSTRUCTED = 3,
+  RiftStepFailureReason_INVALID_DESTINATION = 4,
+  RiftStepFailureReason_MIN = RiftStepFailureReason_UNKNOWN,
+  RiftStepFailureReason_MAX = RiftStepFailureReason_INVALID_DESTINATION
+};
+
+inline const RiftStepFailureReason (&EnumValuesRiftStepFailureReason())[5] {
+  static const RiftStepFailureReason values[] = {
+    RiftStepFailureReason_UNKNOWN,
+    RiftStepFailureReason_ON_COOLDOWN,
+    RiftStepFailureReason_NOT_ENOUGH_RESOURCES,
+    RiftStepFailureReason_OBSTRUCTED,
+    RiftStepFailureReason_INVALID_DESTINATION
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesRiftStepFailureReason() {
+  static const char * const names[6] = {
+    "UNKNOWN",
+    "ON_COOLDOWN",
+    "NOT_ENOUGH_RESOURCES",
+    "OBSTRUCTED",
+    "INVALID_DESTINATION",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameRiftStepFailureReason(RiftStepFailureReason e) {
+  if (::flatbuffers::IsOutRange(e, RiftStepFailureReason_UNKNOWN, RiftStepFailureReason_INVALID_DESTINATION)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesRiftStepFailureReason()[index];
+}
+
+enum AbilityFailureReason : int8_t {
+  AbilityFailureReason_UNKNOWN = 0,
+  AbilityFailureReason_ON_COOLDOWN = 1,
+  AbilityFailureReason_NOT_ENOUGH_RESOURCES = 2,
+  AbilityFailureReason_INVALID_TARGET = 3,
+  AbilityFailureReason_OUT_OF_RANGE = 4,
+  AbilityFailureReason_INTERRUPTED = 5,
+  AbilityFailureReason_CHANNELING_FAILED = 6,
+  AbilityFailureReason_MISSING_REQUIREMENTS = 7,
+  AbilityFailureReason_MIN = AbilityFailureReason_UNKNOWN,
+  AbilityFailureReason_MAX = AbilityFailureReason_MISSING_REQUIREMENTS
+};
+
+inline const AbilityFailureReason (&EnumValuesAbilityFailureReason())[8] {
+  static const AbilityFailureReason values[] = {
+    AbilityFailureReason_UNKNOWN,
+    AbilityFailureReason_ON_COOLDOWN,
+    AbilityFailureReason_NOT_ENOUGH_RESOURCES,
+    AbilityFailureReason_INVALID_TARGET,
+    AbilityFailureReason_OUT_OF_RANGE,
+    AbilityFailureReason_INTERRUPTED,
+    AbilityFailureReason_CHANNELING_FAILED,
+    AbilityFailureReason_MISSING_REQUIREMENTS
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesAbilityFailureReason() {
+  static const char * const names[9] = {
+    "UNKNOWN",
+    "ON_COOLDOWN",
+    "NOT_ENOUGH_RESOURCES",
+    "INVALID_TARGET",
+    "OUT_OF_RANGE",
+    "INTERRUPTED",
+    "CHANNELING_FAILED",
+    "MISSING_REQUIREMENTS",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameAbilityFailureReason(AbilityFailureReason e) {
+  if (::flatbuffers::IsOutRange(e, AbilityFailureReason_UNKNOWN, AbilityFailureReason_MISSING_REQUIREMENTS)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesAbilityFailureReason()[index];
 }
 
 enum RiftStepEffectPayload : int8_t {
@@ -410,11 +551,14 @@ enum S2C_UDP_Payload : uint8_t {
   S2C_UDP_Payload_Pong = 7,
   S2C_UDP_Payload_S2C_JoinSuccessMsg = 8,
   S2C_UDP_Payload_S2C_JoinFailedMsg = 9,
+  S2C_UDP_Payload_BasicAttackFailed = 10,
+  S2C_UDP_Payload_RiftStepFailed = 11,
+  S2C_UDP_Payload_AbilityFailed = 12,
   S2C_UDP_Payload_MIN = S2C_UDP_Payload_NONE,
-  S2C_UDP_Payload_MAX = S2C_UDP_Payload_S2C_JoinFailedMsg
+  S2C_UDP_Payload_MAX = S2C_UDP_Payload_AbilityFailed
 };
 
-inline const S2C_UDP_Payload (&EnumValuesS2C_UDP_Payload())[10] {
+inline const S2C_UDP_Payload (&EnumValuesS2C_UDP_Payload())[13] {
   static const S2C_UDP_Payload values[] = {
     S2C_UDP_Payload_NONE,
     S2C_UDP_Payload_EntityStateUpdate,
@@ -425,13 +569,16 @@ inline const S2C_UDP_Payload (&EnumValuesS2C_UDP_Payload())[10] {
     S2C_UDP_Payload_SystemBroadcast,
     S2C_UDP_Payload_Pong,
     S2C_UDP_Payload_S2C_JoinSuccessMsg,
-    S2C_UDP_Payload_S2C_JoinFailedMsg
+    S2C_UDP_Payload_S2C_JoinFailedMsg,
+    S2C_UDP_Payload_BasicAttackFailed,
+    S2C_UDP_Payload_RiftStepFailed,
+    S2C_UDP_Payload_AbilityFailed
   };
   return values;
 }
 
 inline const char * const *EnumNamesS2C_UDP_Payload() {
-  static const char * const names[11] = {
+  static const char * const names[14] = {
     "NONE",
     "EntityStateUpdate",
     "RiftStepInitiated",
@@ -442,13 +589,16 @@ inline const char * const *EnumNamesS2C_UDP_Payload() {
     "Pong",
     "S2C_JoinSuccessMsg",
     "S2C_JoinFailedMsg",
+    "BasicAttackFailed",
+    "RiftStepFailed",
+    "AbilityFailed",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameS2C_UDP_Payload(S2C_UDP_Payload e) {
-  if (::flatbuffers::IsOutRange(e, S2C_UDP_Payload_NONE, S2C_UDP_Payload_S2C_JoinFailedMsg)) return "";
+  if (::flatbuffers::IsOutRange(e, S2C_UDP_Payload_NONE, S2C_UDP_Payload_AbilityFailed)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesS2C_UDP_Payload()[index];
 }
@@ -493,6 +643,18 @@ template<> struct S2C_UDP_PayloadTraits<RiftForged::Networking::UDP::S2C::S2C_Jo
   static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_S2C_JoinFailedMsg;
 };
 
+template<> struct S2C_UDP_PayloadTraits<RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsg> {
+  static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_BasicAttackFailed;
+};
+
+template<> struct S2C_UDP_PayloadTraits<RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsg> {
+  static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_RiftStepFailed;
+};
+
+template<> struct S2C_UDP_PayloadTraits<RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsg> {
+  static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_AbilityFailed;
+};
+
 template<typename T> struct S2C_UDP_PayloadUnionTraits {
   static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_NONE;
 };
@@ -531,6 +693,18 @@ template<> struct S2C_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::S2C::S
 
 template<> struct S2C_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsgT> {
   static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_S2C_JoinFailedMsg;
+};
+
+template<> struct S2C_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT> {
+  static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_BasicAttackFailed;
+};
+
+template<> struct S2C_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT> {
+  static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_RiftStepFailed;
+};
+
+template<> struct S2C_UDP_PayloadUnionTraits<RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT> {
+  static const S2C_UDP_Payload enum_value = S2C_UDP_Payload_AbilityFailed;
 };
 
 struct S2C_UDP_PayloadUnion {
@@ -634,6 +808,30 @@ struct S2C_UDP_PayloadUnion {
   const RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsgT *AsS2C_JoinFailedMsg() const {
     return type == S2C_UDP_Payload_S2C_JoinFailedMsg ?
       reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsgT *>(value) : nullptr;
+  }
+  RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT *AsBasicAttackFailed() {
+    return type == S2C_UDP_Payload_BasicAttackFailed ?
+      reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT *>(value) : nullptr;
+  }
+  const RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT *AsBasicAttackFailed() const {
+    return type == S2C_UDP_Payload_BasicAttackFailed ?
+      reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT *>(value) : nullptr;
+  }
+  RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT *AsRiftStepFailed() {
+    return type == S2C_UDP_Payload_RiftStepFailed ?
+      reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT *>(value) : nullptr;
+  }
+  const RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT *AsRiftStepFailed() const {
+    return type == S2C_UDP_Payload_RiftStepFailed ?
+      reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT *>(value) : nullptr;
+  }
+  RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT *AsAbilityFailed() {
+    return type == S2C_UDP_Payload_AbilityFailed ?
+      reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT *>(value) : nullptr;
+  }
+  const RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT *AsAbilityFailed() const {
+    return type == S2C_UDP_Payload_AbilityFailed ?
+      reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT *>(value) : nullptr;
   }
 };
 
@@ -1231,6 +1429,206 @@ inline ::flatbuffers::Offset<S2C_SpawnProjectileMsg> CreateS2C_SpawnProjectileMs
 }
 
 ::flatbuffers::Offset<S2C_SpawnProjectileMsg> CreateS2C_SpawnProjectileMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_SpawnProjectileMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct S2C_BasicAttackFailedMsgT : public ::flatbuffers::NativeTable {
+  typedef S2C_BasicAttackFailedMsg TableType;
+  uint64_t player_id = 0;
+  RiftForged::Networking::UDP::S2C::BasicAttackFailureReason reason = RiftForged::Networking::UDP::S2C::BasicAttackFailureReason_UNKNOWN;
+};
+
+struct S2C_BasicAttackFailedMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef S2C_BasicAttackFailedMsgT NativeTableType;
+  typedef S2C_BasicAttackFailedMsgBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_PLAYER_ID = 4,
+    VT_REASON = 6
+  };
+  uint64_t player_id() const {
+    return GetField<uint64_t>(VT_PLAYER_ID, 0);
+  }
+  RiftForged::Networking::UDP::S2C::BasicAttackFailureReason reason() const {
+    return static_cast<RiftForged::Networking::UDP::S2C::BasicAttackFailureReason>(GetField<int8_t>(VT_REASON, 0));
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_PLAYER_ID, 8) &&
+           VerifyField<int8_t>(verifier, VT_REASON, 1) &&
+           verifier.EndTable();
+  }
+  S2C_BasicAttackFailedMsgT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(S2C_BasicAttackFailedMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<S2C_BasicAttackFailedMsg> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_BasicAttackFailedMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct S2C_BasicAttackFailedMsgBuilder {
+  typedef S2C_BasicAttackFailedMsg Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_player_id(uint64_t player_id) {
+    fbb_.AddElement<uint64_t>(S2C_BasicAttackFailedMsg::VT_PLAYER_ID, player_id, 0);
+  }
+  void add_reason(RiftForged::Networking::UDP::S2C::BasicAttackFailureReason reason) {
+    fbb_.AddElement<int8_t>(S2C_BasicAttackFailedMsg::VT_REASON, static_cast<int8_t>(reason), 0);
+  }
+  explicit S2C_BasicAttackFailedMsgBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<S2C_BasicAttackFailedMsg> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<S2C_BasicAttackFailedMsg>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<S2C_BasicAttackFailedMsg> CreateS2C_BasicAttackFailedMsg(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t player_id = 0,
+    RiftForged::Networking::UDP::S2C::BasicAttackFailureReason reason = RiftForged::Networking::UDP::S2C::BasicAttackFailureReason_UNKNOWN) {
+  S2C_BasicAttackFailedMsgBuilder builder_(_fbb);
+  builder_.add_player_id(player_id);
+  builder_.add_reason(reason);
+  return builder_.Finish();
+}
+
+::flatbuffers::Offset<S2C_BasicAttackFailedMsg> CreateS2C_BasicAttackFailedMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_BasicAttackFailedMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct S2C_RiftStepFailedMsgT : public ::flatbuffers::NativeTable {
+  typedef S2C_RiftStepFailedMsg TableType;
+  uint64_t player_id = 0;
+  RiftForged::Networking::UDP::S2C::RiftStepFailureReason reason = RiftForged::Networking::UDP::S2C::RiftStepFailureReason_UNKNOWN;
+};
+
+struct S2C_RiftStepFailedMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef S2C_RiftStepFailedMsgT NativeTableType;
+  typedef S2C_RiftStepFailedMsgBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_PLAYER_ID = 4,
+    VT_REASON = 6
+  };
+  uint64_t player_id() const {
+    return GetField<uint64_t>(VT_PLAYER_ID, 0);
+  }
+  RiftForged::Networking::UDP::S2C::RiftStepFailureReason reason() const {
+    return static_cast<RiftForged::Networking::UDP::S2C::RiftStepFailureReason>(GetField<int8_t>(VT_REASON, 0));
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_PLAYER_ID, 8) &&
+           VerifyField<int8_t>(verifier, VT_REASON, 1) &&
+           verifier.EndTable();
+  }
+  S2C_RiftStepFailedMsgT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(S2C_RiftStepFailedMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<S2C_RiftStepFailedMsg> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_RiftStepFailedMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct S2C_RiftStepFailedMsgBuilder {
+  typedef S2C_RiftStepFailedMsg Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_player_id(uint64_t player_id) {
+    fbb_.AddElement<uint64_t>(S2C_RiftStepFailedMsg::VT_PLAYER_ID, player_id, 0);
+  }
+  void add_reason(RiftForged::Networking::UDP::S2C::RiftStepFailureReason reason) {
+    fbb_.AddElement<int8_t>(S2C_RiftStepFailedMsg::VT_REASON, static_cast<int8_t>(reason), 0);
+  }
+  explicit S2C_RiftStepFailedMsgBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<S2C_RiftStepFailedMsg> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<S2C_RiftStepFailedMsg>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<S2C_RiftStepFailedMsg> CreateS2C_RiftStepFailedMsg(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t player_id = 0,
+    RiftForged::Networking::UDP::S2C::RiftStepFailureReason reason = RiftForged::Networking::UDP::S2C::RiftStepFailureReason_UNKNOWN) {
+  S2C_RiftStepFailedMsgBuilder builder_(_fbb);
+  builder_.add_player_id(player_id);
+  builder_.add_reason(reason);
+  return builder_.Finish();
+}
+
+::flatbuffers::Offset<S2C_RiftStepFailedMsg> CreateS2C_RiftStepFailedMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_RiftStepFailedMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct S2C_AbilityFailedMsgT : public ::flatbuffers::NativeTable {
+  typedef S2C_AbilityFailedMsg TableType;
+  uint64_t player_id = 0;
+  uint32_t ability_id = 0;
+  RiftForged::Networking::UDP::S2C::AbilityFailureReason reason = RiftForged::Networking::UDP::S2C::AbilityFailureReason_UNKNOWN;
+};
+
+struct S2C_AbilityFailedMsg FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef S2C_AbilityFailedMsgT NativeTableType;
+  typedef S2C_AbilityFailedMsgBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_PLAYER_ID = 4,
+    VT_ABILITY_ID = 6,
+    VT_REASON = 8
+  };
+  uint64_t player_id() const {
+    return GetField<uint64_t>(VT_PLAYER_ID, 0);
+  }
+  uint32_t ability_id() const {
+    return GetField<uint32_t>(VT_ABILITY_ID, 0);
+  }
+  RiftForged::Networking::UDP::S2C::AbilityFailureReason reason() const {
+    return static_cast<RiftForged::Networking::UDP::S2C::AbilityFailureReason>(GetField<int8_t>(VT_REASON, 0));
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_PLAYER_ID, 8) &&
+           VerifyField<uint32_t>(verifier, VT_ABILITY_ID, 4) &&
+           VerifyField<int8_t>(verifier, VT_REASON, 1) &&
+           verifier.EndTable();
+  }
+  S2C_AbilityFailedMsgT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(S2C_AbilityFailedMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<S2C_AbilityFailedMsg> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_AbilityFailedMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct S2C_AbilityFailedMsgBuilder {
+  typedef S2C_AbilityFailedMsg Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_player_id(uint64_t player_id) {
+    fbb_.AddElement<uint64_t>(S2C_AbilityFailedMsg::VT_PLAYER_ID, player_id, 0);
+  }
+  void add_ability_id(uint32_t ability_id) {
+    fbb_.AddElement<uint32_t>(S2C_AbilityFailedMsg::VT_ABILITY_ID, ability_id, 0);
+  }
+  void add_reason(RiftForged::Networking::UDP::S2C::AbilityFailureReason reason) {
+    fbb_.AddElement<int8_t>(S2C_AbilityFailedMsg::VT_REASON, static_cast<int8_t>(reason), 0);
+  }
+  explicit S2C_AbilityFailedMsgBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<S2C_AbilityFailedMsg> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<S2C_AbilityFailedMsg>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<S2C_AbilityFailedMsg> CreateS2C_AbilityFailedMsg(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t player_id = 0,
+    uint32_t ability_id = 0,
+    RiftForged::Networking::UDP::S2C::AbilityFailureReason reason = RiftForged::Networking::UDP::S2C::AbilityFailureReason_UNKNOWN) {
+  S2C_AbilityFailedMsgBuilder builder_(_fbb);
+  builder_.add_player_id(player_id);
+  builder_.add_ability_id(ability_id);
+  builder_.add_reason(reason);
+  return builder_.Finish();
+}
+
+::flatbuffers::Offset<S2C_AbilityFailedMsg> CreateS2C_AbilityFailedMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_AbilityFailedMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
 struct S2C_EntityStateUpdateMsgT : public ::flatbuffers::NativeTable {
   typedef S2C_EntityStateUpdateMsg TableType;
@@ -2160,10 +2558,19 @@ struct Root_S2C_UDP_Message FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Tab
   const RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsg *payload_as_S2C_JoinFailedMsg() const {
     return payload_type() == RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_S2C_JoinFailedMsg ? static_cast<const RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsg *>(payload()) : nullptr;
   }
+  const RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsg *payload_as_BasicAttackFailed() const {
+    return payload_type() == RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_BasicAttackFailed ? static_cast<const RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsg *>(payload()) : nullptr;
+  }
+  const RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsg *payload_as_RiftStepFailed() const {
+    return payload_type() == RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_RiftStepFailed ? static_cast<const RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsg *>(payload()) : nullptr;
+  }
+  const RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsg *payload_as_AbilityFailed() const {
+    return payload_type() == RiftForged::Networking::UDP::S2C::S2C_UDP_Payload_AbilityFailed ? static_cast<const RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsg *>(payload()) : nullptr;
+  }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint8_t>(verifier, VT_PAYLOAD_TYPE, 1) &&
-           VerifyOffsetRequired(verifier, VT_PAYLOAD) &&
+           VerifyOffset(verifier, VT_PAYLOAD) &&
            VerifyS2C_UDP_Payload(verifier, payload(), payload_type()) &&
            verifier.EndTable();
   }
@@ -2208,6 +2615,18 @@ template<> inline const RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsg *Roo
   return payload_as_S2C_JoinFailedMsg();
 }
 
+template<> inline const RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsg *Root_S2C_UDP_Message::payload_as<RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsg>() const {
+  return payload_as_BasicAttackFailed();
+}
+
+template<> inline const RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsg *Root_S2C_UDP_Message::payload_as<RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsg>() const {
+  return payload_as_RiftStepFailed();
+}
+
+template<> inline const RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsg *Root_S2C_UDP_Message::payload_as<RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsg>() const {
+  return payload_as_AbilityFailed();
+}
+
 struct Root_S2C_UDP_MessageBuilder {
   typedef Root_S2C_UDP_Message Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
@@ -2225,7 +2644,6 @@ struct Root_S2C_UDP_MessageBuilder {
   ::flatbuffers::Offset<Root_S2C_UDP_Message> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = ::flatbuffers::Offset<Root_S2C_UDP_Message>(end);
-    fbb_.Required(o, Root_S2C_UDP_Message::VT_PAYLOAD);
     return o;
   }
 };
@@ -2534,6 +2952,96 @@ inline ::flatbuffers::Offset<S2C_SpawnProjectileMsg> CreateS2C_SpawnProjectileMs
       _speed,
       _max_range,
       _projectile_vfx_tag);
+}
+
+inline S2C_BasicAttackFailedMsgT *S2C_BasicAttackFailedMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<S2C_BasicAttackFailedMsgT>(new S2C_BasicAttackFailedMsgT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void S2C_BasicAttackFailedMsg::UnPackTo(S2C_BasicAttackFailedMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = player_id(); _o->player_id = _e; }
+  { auto _e = reason(); _o->reason = _e; }
+}
+
+inline ::flatbuffers::Offset<S2C_BasicAttackFailedMsg> S2C_BasicAttackFailedMsg::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_BasicAttackFailedMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateS2C_BasicAttackFailedMsg(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<S2C_BasicAttackFailedMsg> CreateS2C_BasicAttackFailedMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_BasicAttackFailedMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const S2C_BasicAttackFailedMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _player_id = _o->player_id;
+  auto _reason = _o->reason;
+  return RiftForged::Networking::UDP::S2C::CreateS2C_BasicAttackFailedMsg(
+      _fbb,
+      _player_id,
+      _reason);
+}
+
+inline S2C_RiftStepFailedMsgT *S2C_RiftStepFailedMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<S2C_RiftStepFailedMsgT>(new S2C_RiftStepFailedMsgT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void S2C_RiftStepFailedMsg::UnPackTo(S2C_RiftStepFailedMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = player_id(); _o->player_id = _e; }
+  { auto _e = reason(); _o->reason = _e; }
+}
+
+inline ::flatbuffers::Offset<S2C_RiftStepFailedMsg> S2C_RiftStepFailedMsg::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_RiftStepFailedMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateS2C_RiftStepFailedMsg(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<S2C_RiftStepFailedMsg> CreateS2C_RiftStepFailedMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_RiftStepFailedMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const S2C_RiftStepFailedMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _player_id = _o->player_id;
+  auto _reason = _o->reason;
+  return RiftForged::Networking::UDP::S2C::CreateS2C_RiftStepFailedMsg(
+      _fbb,
+      _player_id,
+      _reason);
+}
+
+inline S2C_AbilityFailedMsgT *S2C_AbilityFailedMsg::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<S2C_AbilityFailedMsgT>(new S2C_AbilityFailedMsgT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void S2C_AbilityFailedMsg::UnPackTo(S2C_AbilityFailedMsgT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = player_id(); _o->player_id = _e; }
+  { auto _e = ability_id(); _o->ability_id = _e; }
+  { auto _e = reason(); _o->reason = _e; }
+}
+
+inline ::flatbuffers::Offset<S2C_AbilityFailedMsg> S2C_AbilityFailedMsg::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_AbilityFailedMsgT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateS2C_AbilityFailedMsg(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<S2C_AbilityFailedMsg> CreateS2C_AbilityFailedMsg(::flatbuffers::FlatBufferBuilder &_fbb, const S2C_AbilityFailedMsgT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const S2C_AbilityFailedMsgT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _player_id = _o->player_id;
+  auto _ability_id = _o->ability_id;
+  auto _reason = _o->reason;
+  return RiftForged::Networking::UDP::S2C::CreateS2C_AbilityFailedMsg(
+      _fbb,
+      _player_id,
+      _ability_id,
+      _reason);
 }
 
 inline S2C_EntityStateUpdateMsgT::S2C_EntityStateUpdateMsgT(const S2C_EntityStateUpdateMsgT &o)
@@ -3163,6 +3671,18 @@ inline bool VerifyS2C_UDP_Payload(::flatbuffers::Verifier &verifier, const void 
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsg *>(obj);
       return verifier.VerifyTable(ptr);
     }
+    case S2C_UDP_Payload_BasicAttackFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsg *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case S2C_UDP_Payload_RiftStepFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsg *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case S2C_UDP_Payload_AbilityFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsg *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
     default: return true;
   }
 }
@@ -3218,6 +3738,18 @@ inline void *S2C_UDP_PayloadUnion::UnPack(const void *obj, S2C_UDP_Payload type,
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsg *>(obj);
       return ptr->UnPack(resolver);
     }
+    case S2C_UDP_Payload_BasicAttackFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsg *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case S2C_UDP_Payload_RiftStepFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsg *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case S2C_UDP_Payload_AbilityFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsg *>(obj);
+      return ptr->UnPack(resolver);
+    }
     default: return nullptr;
   }
 }
@@ -3261,6 +3793,18 @@ inline ::flatbuffers::Offset<void> S2C_UDP_PayloadUnion::Pack(::flatbuffers::Fla
       auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsgT *>(value);
       return CreateS2C_JoinFailedMsg(_fbb, ptr, _rehasher).Union();
     }
+    case S2C_UDP_Payload_BasicAttackFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT *>(value);
+      return CreateS2C_BasicAttackFailedMsg(_fbb, ptr, _rehasher).Union();
+    }
+    case S2C_UDP_Payload_RiftStepFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT *>(value);
+      return CreateS2C_RiftStepFailedMsg(_fbb, ptr, _rehasher).Union();
+    }
+    case S2C_UDP_Payload_AbilityFailed: {
+      auto ptr = reinterpret_cast<const RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT *>(value);
+      return CreateS2C_AbilityFailedMsg(_fbb, ptr, _rehasher).Union();
+    }
     default: return 0;
   }
 }
@@ -3301,6 +3845,18 @@ inline S2C_UDP_PayloadUnion::S2C_UDP_PayloadUnion(const S2C_UDP_PayloadUnion &u)
     }
     case S2C_UDP_Payload_S2C_JoinFailedMsg: {
       value = new RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsgT(*reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsgT *>(u.value));
+      break;
+    }
+    case S2C_UDP_Payload_BasicAttackFailed: {
+      value = new RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT(*reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT *>(u.value));
+      break;
+    }
+    case S2C_UDP_Payload_RiftStepFailed: {
+      value = new RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT(*reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT *>(u.value));
+      break;
+    }
+    case S2C_UDP_Payload_AbilityFailed: {
+      value = new RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT(*reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT *>(u.value));
       break;
     }
     default:
@@ -3352,6 +3908,21 @@ inline void S2C_UDP_PayloadUnion::Reset() {
     }
     case S2C_UDP_Payload_S2C_JoinFailedMsg: {
       auto ptr = reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_JoinFailedMsgT *>(value);
+      delete ptr;
+      break;
+    }
+    case S2C_UDP_Payload_BasicAttackFailed: {
+      auto ptr = reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_BasicAttackFailedMsgT *>(value);
+      delete ptr;
+      break;
+    }
+    case S2C_UDP_Payload_RiftStepFailed: {
+      auto ptr = reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_RiftStepFailedMsgT *>(value);
+      delete ptr;
+      break;
+    }
+    case S2C_UDP_Payload_AbilityFailed: {
+      auto ptr = reinterpret_cast<RiftForged::Networking::UDP::S2C::S2C_AbilityFailedMsgT *>(value);
       delete ptr;
       break;
     }

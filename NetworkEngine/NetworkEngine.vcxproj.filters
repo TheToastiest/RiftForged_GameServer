@@ -52,9 +52,6 @@
     <Filter Include="PacketManagement\Serialization\FlatBuffers\MessageHandlers">
       <UniqueIdentifier>{f46cbf82-2e2b-4278-9891-651f17328a1c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Networking\NetworkEndpoint">
-      <UniqueIdentifier>{32e05806-e517-471b-81df-3cc6d718eaf0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Utilities">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
@@ -123,6 +120,9 @@
     <Filter Include="Dispatch\Handlers_C2S\JoinRequestMessageHandler">
       <UniqueIdentifier>{43f49680-aef5-4b96-aeb4-448f66ddc1bd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Networking\Clients\ClientEndpoint\NetworkEndpoint">
+      <UniqueIdentifier>{32e05806-e517-471b-81df-3cc6d718eaf0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GamePacketHeader.h">
@@ -144,7 +144,7 @@
       <Filter>Networking\SocketHandling\UDPSocketAsync</Filter>
     </ClInclude>
     <ClInclude Include="NetworkEndpoint.h">
-      <Filter>Networking\NetworkEndpoint</Filter>
+      <Filter>Networking\Clients\ClientEndpoint\NetworkEndpoint</Filter>
     </ClInclude>
     <ClInclude Include="PacketProcessor.h">
       <Filter>Networking\PacketProcessor</Filter>

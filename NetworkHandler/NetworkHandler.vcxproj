@@ -40,7 +40,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -132,12 +132,15 @@
     <ClCompile Include="AES-256-GCM.cpp" />
     <ClCompile Include="ChaCha20Poly1305.cpp" />
     <ClCompile Include="CryptoManager.cpp" />
+    <ClCompile Include="GenerateServerKeys.cpp" />
     <ClCompile Include="LZ4Compressor.cpp" />
     <ClCompile Include="ZstdCompressor.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="CryptoManager.h" />
     <ClInclude Include="LZ4Compressor.h" />
+    <ClInclude Include="SecureConnectionContext.h" />
     <ClInclude Include="ZstdCompressor.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

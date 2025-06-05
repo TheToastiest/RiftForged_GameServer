@@ -48,7 +48,7 @@ int main() {
 
     const unsigned short SERVER_PORT = 12345;
     const std::string LISTEN_IP_ADDRESS = "0.0.0.0";
-    const size_t GAME_LOGIC_THREAD_POOL_SIZE = 6; // Or std::thread::hardware_concurrency() if appropriate
+    const size_t GAME_LOGIC_THREAD_POOL_SIZE = 12; // Or std::thread::hardware_concurrency() if appropriate
     const std::chrono::milliseconds GAME_TICK_INTERVAL_MS(5); // Approx 200 TPS
 
     // Declare unique_ptrs for RAII
