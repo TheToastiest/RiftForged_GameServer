@@ -276,10 +276,9 @@ namespace RiftForged {
 
         RiftForged::GameLogic::RiftStepOutcome GameplayEngine::ExecuteRiftStep(
             RiftForged::GameLogic::ActivePlayer* player,
-            RiftForged::Networking::UDP::C2S::RiftStepDirectionalIntent intent) { // intent from
+            RiftForged::Networking::UDP::C2S::RiftStepDirectionalIntent intent) {
 
-            RiftForged::GameLogic::RiftStepOutcome outcome; // Defined in
-            // Default constructor should initialize success = false;
+            RiftForged::GameLogic::RiftStepOutcome outcome; 
 
             if (!player) {
                 RF_GAMEPLAY_ERROR("ExecuteRiftStep: Null player received."); //
@@ -301,11 +300,6 @@ namespace RiftForged {
                 return outcome;
             }
 
-            // Player calculates its intended outcome based on its current_rift_step_definition and intent.
-            // This should populate: outcome.actual_start_position, outcome.intended_target_position,
-            // outcome.calculated_target_position (e.g., set to intended_target_position initially),
-            // outcome.type_executed, outcome.entry_effects_data, outcome.exit_effects_data, VFX IDs etc.
-            // Replace the problematic line with the following:  
             outcome = player->PrepareRiftStepOutcome(intent, player->current_rift_step_definition.type);
             if (!outcome.success) {
                 RF_GAMEPLAY_INFO("Player {} RiftStep preparation failed internally by ActivePlayer: {}", player->playerId, outcome.failure_reason_code); //
@@ -344,12 +338,7 @@ namespace RiftForged {
                 RiftForged::Physics::HitResult hit_result; // Struct from
 
                 // Define PxQueryFilterData for the sweep.
-                // The primary filtering (dense vs. minor obstacles) will be handled by the
-                // RiftStepSweepQueryFilterCallback inside PhysicsEngine::CapsuleSweepSingle.
-                // This filterData can be used for broad-phase culling if needed.
                 physx::PxFilterData query_filter_data_for_sweep;
-                // Example: (You'll set this based on your collision layers/groups)
-                // query_filter_data_for_sweep.word0 = YOUR_RIFTSTEP_SWEEP_COLLISION_MASK; 
                 physx::PxQueryFilterData physx_query_filter_data(query_filter_data_for_sweep, physx::PxQueryFlag::eSTATIC | physx::PxQueryFlag::eDYNAMIC | physx::PxQueryFlag::ePREFILTER | physx::PxQueryFlag::ePOSTFILTER);
 
                 bool found_blocking_hit = m_physicsEngine.CapsuleSweepSingle( // Method from
@@ -392,18 +381,15 @@ namespace RiftForged {
             }
 
             // Physically move the character controller to the (potentially adjusted) actual_final_position.
-            // SetCharacterControllerPose is suitable for this teleport-like repositioning.
             m_physicsEngine.SetCharacterControllerPose(px_controller, outcome.actual_final_position); // Method from
 
-            // Update the ActivePlayer's logical position to match the physics outcome.
-            // This will also set the isDirty flag.
+            // Update the ActivePlayer's logical position to match the physics outcome and set isDirty
             player->SetPosition(outcome.actual_final_position); // Method from
 
             // Apply Cooldown using the definition's base cooldown.
             player->SetAbilityCooldown(RiftForged::GameLogic::RIFTSTEP_ABILITY_ID, player->current_rift_step_definition.base_cooldown_sec); //
 
             // TODO: Implement robust application of entry/exit effects from outcome.entry_effects_data and outcome.exit_effects_data
-            // This would involve iterating them, determining targets, and applying damage, buffs, creating persistent areas etc.
             // For example:
             // ApplyRiftStepEffects(player, outcome.actual_start_position, outcome.entry_effects_data);
             // ApplyRiftStepEffects(player, outcome.actual_final_position, outcome.exit_effects_data);
@@ -419,12 +405,6 @@ namespace RiftForged {
             player->SetAnimationState(RiftForged::Networking::Shared::AnimationState::AnimationState_Rifting_End); //
 
             outcome.success = true;
-            // The S2C message will use outcome.actual_start_position, outcome.calculated_target_position,
-            // outcome.actual_final_position, outcome.travel_duration_sec etc.
-            // Ensure player->PrepareRiftStepOutcome() correctly sets outcome.calculated_target_position,
-            // or set it here if it's simply the intended target before physics.
-            // outcome.calculated_target_position = outcome.intended_target_position; // Already assumed to be done by PrepareRiftStepOutcome or now explicitly.
-
             return outcome;
         }
 
